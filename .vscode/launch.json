@@ -1,0 +1,27 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run API",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["api:app", "--reload"],
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "noDebug": true,
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Debug API",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["api:app", "--reload"],
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "console": "integratedTerminal",
+      "subProcess": true,
+      "justMyCode": true
+    }
+  ]
+}

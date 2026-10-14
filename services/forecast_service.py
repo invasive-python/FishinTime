@@ -1,0 +1,86 @@
+from datetime import date as date_type
+
+import services.city_data_service as city_service
+import services.moon_phase_service as moon
+import services.tides_service as tides
+import services.weather_service as weather
+from models.weather_schemas import ForecastResponse
+
+
+def _normalize_date(value):
+    if isinstance(value, str):
+        return date_type.fromisoformat(value)
+    return value
+
+
+def _nested_lookup(mapping, *keys):
+    current = mapping
+    for key in keys:
+        if not isinstance(current, dict):
+            return None
+        current = current.get(key)
+    return current
+
+
+def serve_forecast(city, date):
+    parsed_date = _normalize_date(date)
+    try:
+        forecast = weather.get_forecast(city, parsed_date)
+        city_data = city_service.get_city_data(city)
+        if not city_data:
+            return None
+
+        phase_data = moon.get_moon_phase_from_city_data(city_data, parsed_date)
+        tide_data = tides.get_tides_from_station_id_and_dates(city, parsed_date.isoformat())
+
+        if not forecast or not getattr(forecast, "periods", None):
+            return None
+        if not tide_data or not phase_data:
+            return None
+
+        forecast_period = forecast.periods[0]
+        precipitation = forecast_period.precipitation_probability or 0
+        temperature = forecast_period.temperature
+        fahrenheit = ((temperature * 1.8) + 32) if temperature is not None else 0
+
+        wind_speed = forecast_period.wind_speed or {}
+        wind_speed_max = float(wind_speed.get("maxValue", wind_speed.get("value", 0)))
+        wind_speed_min = float(wind_speed.get("minValue", wind_speed.get("value", 0)))
+        conversion_factor = 0.621371
+
+        closest_phase = _nested_lookup(phase_data, "data", "closestphase") or {}
+        closest_date = "-".join(
+            str(part)
+            for part in (
+                closest_phase.get("year"),
+                closest_phase.get("month"),
+                closest_phase.get("day"),
+            )
+        )
+
+        return ForecastResponse(
+            city=city,
+            date=str(parsed_date),
+            precipitation_probability=int(precipitation),
+            temp=int(round(fahrenheit)),
+            wind_speed_max=round(wind_speed_max * conversion_factor, 2),
+            wind_speed_min=round(wind_speed_min * conversion_factor, 2),
+            wind_direction=forecast_period.wind_direction or "",
+            moon_current_phase=str(
+                _nested_lookup(phase_data, "data", "curphase")
+                or _nested_lookup(phase_data, "curphase")
+                or ""
+            ),
+            moon_closest_phase=str(closest_phase.get("phase") or ""),
+            moon_closest_phase_date = closest_date,
+            moon_brightness=str(
+                _nested_lookup(phase_data, "data", "fracillum")
+                or _nested_lookup(phase_data, "fracillum")
+                or 0.0
+            ),
+            predictions=tide_data,
+        )
+    except Exception as e:
+        print(e)
+        raise
+
