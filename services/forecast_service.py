@@ -2,6 +2,7 @@ from datetime import date as date_type
 
 import services.city_data_service as city_service
 import services.moon_phase_service as moon
+import services.noaa_station_service as noaa_stations
 import services.tides_service as tides
 import services.weather_service as weather
 from models.weather_schemas import ForecastResponse
@@ -22,16 +23,23 @@ def _nested_lookup(mapping, *keys):
     return current
 
 
-def serve_forecast(city, date):
+def serve_forecast(city, state, date):
     parsed_date = _normalize_date(date)
     try:
-        forecast = weather.get_forecast(city, parsed_date)
-        city_data = city_service.get_city_data(city)
+        city_norm = city.partition(",")[0].strip()
+        forecast = weather.get_forecast(city_norm, state, parsed_date)
+        city_data = city_service.get_city_data(city_norm, state)
         if not city_data:
             return None
 
         phase_data = moon.get_moon_phase_from_city_data(city_data, parsed_date)
-        tide_data = tides.get_tides_from_station_id_and_dates(city, parsed_date.isoformat())
+        station_id = noaa_stations.get_station_id(city)
+        if station_id is None:
+            return None
+
+        tide_data = tides.get_tides_from_station_id_and_dates(
+            station_id, parsed_date.isoformat()
+        )
 
         if not forecast or not getattr(forecast, "periods", None):
             return None
@@ -39,7 +47,11 @@ def serve_forecast(city, date):
             return None
 
         forecast_period = forecast.periods[0]
+        detailed_forecast = forecast_period.detailed_forecast
         precipitation = forecast_period.precipitation_probability or 0
+        start_time = forecast_period.start_time.astimezone(
+            city_service.get_location_timezone(city_data)
+        ).strftime("%Y-%m-%d %H:%M")
         temperature = forecast_period.temperature
         fahrenheit = ((temperature * 1.8) + 32) if temperature is not None else 0
 
@@ -62,6 +74,7 @@ def serve_forecast(city, date):
             city=city,
             date=str(parsed_date),
             precipitation_probability=int(precipitation),
+            start_time=start_time,
             temp=int(round(fahrenheit)),
             wind_speed_max=round(wind_speed_max * conversion_factor, 2),
             wind_speed_min=round(wind_speed_min * conversion_factor, 2),
@@ -79,8 +92,9 @@ def serve_forecast(city, date):
                 or 0.0
             ),
             predictions=tide_data,
+            detailed_forecast=detailed_forecast,
+            ai_evaluation=""
         )
     except Exception as e:
         print(e)
         raise
-

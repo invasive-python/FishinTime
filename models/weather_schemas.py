@@ -34,6 +34,7 @@ class ForecastResponse(BaseModel):
     city: str
     date: str
     precipitation_probability: int
+    start_time: str
     temp: int
     wind_speed_max: float
     wind_speed_min: float
@@ -43,3 +44,5 @@ class ForecastResponse(BaseModel):
     moon_closest_phase_date: str
     moon_brightness: str
     predictions: list[dict]
+    detailed_forecast: str
+    ai_evaluation: str

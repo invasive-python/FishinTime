@@ -1,9 +1,15 @@
 import requests
 from datetime import datetime
 from fastapi import APIRouter, HTTPException
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+from openai import OpenAI, OpenAIError
 import services.forecast_service as forecast_service
 
-from models.weather_schemas import ForecastResponse, LocationResponse
+from models.weather_schemas import ForecastResponse
+
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 router = APIRouter()
 
@@ -17,74 +23,72 @@ def is_today_or_future(date_string: str, date_format: str = "%Y-%m-%d") -> bool:
     except ValueError:
         return False
 
-
-@router.get(
-    "/forecast/get_location",
-    response_model=LocationResponse,
-    summary="Get forecast periods for a city and date",
-    tags=["get_forecast"],
-)
-def get_location(state: str) -> LocationResponse:
-    try:
-        response = requests.get(
-            "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json",
-            params={"type": "tidepredictions", "units": "english"},
-            timeout=20,
-        )
-        response.raise_for_status()
-        station_data = response.json()
-        if not isinstance(station_data, dict):
-            raise ValueError("NOAA station response must be a JSON object.")
-        stations = station_data.get("stations", [])
-        if not isinstance(stations, list):
-            raise ValueError("NOAA station response must contain a stations list.")
-
-        fl_stations = [
-            station
-            for station in stations
-            if isinstance(station, dict) and station.get("state") == state
-        ]
-
-        return LocationResponse(state=state, stations=fl_stations)
-    except (requests.RequestException, ValueError) as exc:
-        raise HTTPException(
-            status_code=502,
-            detail=f"NOAA station request or response failed: {exc}",
-        ) from exc
-
-
 @router.get(
     "/forecast/get_forecast",
     response_model=ForecastResponse,
     summary="Get forecast periods for a city and date",
     tags=["get_forecast"],
 )
-def get_forecast(city: str, date: str) -> ForecastResponse:
+def get_forecast(city: str, state: str, date: str) -> ForecastResponse:
     try:
-        valid_date = is_today_or_future(date)
+        if not is_today_or_future(date):
+            raise HTTPException(status_code=400, detail="Date must be today or in the future.")
 
-        if valid_date:
+        forecast = forecast_service.serve_forecast(city, state, date)
+        if forecast is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No forecast or NOAA tide station found for {city} on {date}.",
+            )
 
-            forecast = forecast_service.serve_forecast(city, date)
+        print(f"{forecast.city} Fishing Forecast for {forecast.date}:")
+        print("----------------------")
+        print("precipitation: " + str(forecast.precipitation_probability) + "% chance")
+        print("precip.time: " + str(forecast.start_time))
+        print("temperature: " + str(forecast.temp) + "°F")
+        print("wind speed (max): " + str(forecast.wind_speed_max) + " mph")
+        print("wind speed (min): " + str(forecast.wind_speed_min) + " mph")
+        print("wind direction: " + forecast.wind_direction)
+        print("current moon phase: " + forecast.moon_current_phase)
+        print("next moon phase: (" + forecast.moon_closest_phase_date + ") " + forecast.moon_closest_phase)
+        print("moon brightness: " + forecast.moon_brightness)
+        print("tides: " + str(forecast.predictions))
+        print("forecast: " + forecast.detailed_forecast)
 
-            if forecast:
-                print(f"{forecast.city} Fishing Forecast for {forecast.date}:")
-                print("----------------------")
-                print("precipitation: " + str(forecast.precipitation_probability) + "% chance")
-                print("temperature: " + str(forecast.temp) + "°F")
-                print("wind speed (max): " + str(forecast.wind_speed_max) + " mph")
-                print("wind speed (min): " + str(forecast.wind_speed_min) + " mph")
-                print("wind direction: " + forecast.wind_direction)
-                print("current moon phase: " + forecast.moon_current_phase)
-                print("next moon phase: (" + forecast.moon_closest_phase_date + ") " + forecast.moon_closest_phase)
-                print("moon brightness: " + forecast.moon_brightness)
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise HTTPException(
+                status_code=500,
+                detail="OPENAI_API_KEY is not set in the environment or .env file.",
+            )
 
-                return forecast
+        client = OpenAI(api_key=api_key)
+        prompt = f"""Using the information this JSON: {forecast.model_dump_json()}
+                make a judgment as to whether or not it is a good time to go fishing
+                from the surf or in a boat.
+                """;
+
+        with client.beta.agents.sessions.create(
+            agent_id=os.getenv("AGENT_ID"),
+            environment={"type": "none"},
+            input=prompt,
+            stream=True,
+        ).with_result_collection() as stream:
+            result = stream.get_final_result()
+            forecast.ai_evaluation = result.output_text
+
+        print(result.output_text)
+        return forecast
 
     except HTTPException:
         raise
+    except OpenAIError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"OpenAI agent request failed: {exc}",
+        ) from exc
     except (requests.RequestException, KeyError, TypeError, ValueError) as exc:
         raise HTTPException(
             status_code=502,
-            detail=f"Weather provider request or response failed: {exc}",
+            detail=f"External provider request or response failed: {exc}",
         ) from exc 

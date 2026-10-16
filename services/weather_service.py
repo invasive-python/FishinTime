@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from fastapi import APIRouter, HTTPException
 from models.weather_schemas import ForecastPeriod, WeatherResponse
+from services.city_data_service import get_long_lat_from_city
 from typing import Any, NotRequired, Required, TypedDict
 
 import requests
@@ -55,23 +56,6 @@ def _map_noaa_period(period: _NoaaPeriod) -> ForecastPeriod:
     )
 
 
-
-def get_long_lat_from_city(city_name: str) -> dict[str, Any] | None:
-    url = "https://geocoding-api.open-meteo.com/v1/search"
-    params = {"name": city_name, "count": 1}
-
-    response = requests.get(url, params=params, timeout=20)
-    response.raise_for_status()
-    data = response.json()
-
-    if not isinstance(data, dict):
-        raise ValueError("Geocoding response must be a JSON object.")
-    results = data.get("results")
-    if not isinstance(results, list):
-        return None
-    return results[0] if results else None
-
-
 def get_grid_data(lat: float, lon: float) -> dict[str, Any]:
     url = f"https://api.weather.gov/points/{lat},{lon}"
     response = requests.get(url, timeout=20)
@@ -82,9 +66,9 @@ def get_grid_data(lat: float, lon: float) -> dict[str, Any]:
     return data
 
 
-def get_forecast(city: str, date: date) -> WeatherResponse:
+def get_forecast(city: str, state: str, date: date) -> WeatherResponse:
     try:
-        city_data = get_long_lat_from_city(city)
+        city_data = get_long_lat_from_city(city, state)
         if city_data is None:
             raise HTTPException(status_code=404, detail="City not found")
 
@@ -96,7 +80,7 @@ def get_forecast(city: str, date: date) -> WeatherResponse:
             )
 
         return WeatherResponse(
-            city=city, # _data["name"],
+            city=city,
             date=date,
             periods=[_map_noaa_period(period) for period in periods],
         )

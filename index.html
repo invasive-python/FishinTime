@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Surf Fishin' Time</title>
+    <style>
+        :root {
+            font-family: "Segoe UI", sans-serif;
+            font-synthesis: none;
+            text-rendering: optimizeLegibility;
+        }
+
+        body {
+            --page: #e8f4f2;
+            --surface: rgba(255, 255, 255, 0.9);
+            --ink: #173b42;
+            --muted: #56747a;
+            --accent: #087e83;
+            --accent-hover: #05666b;
+            --border: #c7deda;
+            --soft: #f1f8f6;
+            min-height: 100vh;
+            margin: 0;
+            padding: 48px 20px;
+            box-sizing: border-box;
+            color: var(--ink);
+            background-color: var(--page);
+            background-image:
+                radial-gradient(ellipse at 80% 0%, rgba(244, 190, 120, .42), transparent 35%),
+                linear-gradient(155deg, #f7fbf8 0%, #dcefeb 52%, #b5d9d9 100%);
+            transition: background-color .25s, color .25s;
+        }
+
+        .page-shell {
+            width: min(760px, 100%);
+            margin: 0 auto;
+        }
+
+        .masthead { margin-bottom: 30px; }
+        .eyebrow {
+            margin: 0 0 9px;
+            color: var(--accent);
+            font-size: .76rem;
+            font-weight: 800;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+        }
+        h1 { margin: 0; font-size: clamp(2rem, 6vw, 3.4rem); letter-spacing: -.045em; }
+        .intro { max-width: 540px; margin: 12px 0 0; color: var(--muted); line-height: 1.6; }
+
+        .panel {
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            background: var(--surface);
+            box-shadow: 0 16px 45px rgba(15, 49, 57, .09);
+            backdrop-filter: blur(12px);
+        }
+
+        .panel { padding: clamp(22px, 5vw, 36px); }
+        .panel h2 { margin: 0 0 7px; font-size: 1.35rem; }
+        .panel-copy { margin: 0 0 24px; color: var(--muted); }
+        .form-group { margin-bottom: 19px; }
+        label { display: block; margin-bottom: 7px; font-size: .9rem; font-weight: 700; }
+        select, input, .submit-button {
+            width: 100%;
+            min-height: 47px;
+            box-sizing: border-box;
+            padding: 10px 13px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--ink);
+            background: var(--surface);
+            font: inherit;
+        }
+        select:focus, input:focus, button:focus-visible {
+            outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent);
+            outline-offset: 2px;
+        }
+        .submit-button {
+            border: 0;
+            color: #fff;
+            background: var(--accent);
+            font-weight: 800;
+            cursor: pointer;
+        }
+        .submit-button:hover { background: var(--accent-hover); }
+        .submit-button:disabled { opacity: .65; cursor: wait; }
+        #forecastResult {
+            overflow-x: auto;
+            margin: 18px 0 0;
+            padding: 16px;
+            border-radius: 12px;
+            color: var(--ink);
+            background: var(--soft);
+            white-space: pre-wrap;
+        }
+        #forecastResult:empty { display: none; }
+        .tide-table { border-collapse: collapse; white-space: normal; }
+        .tide-table th, .tide-table td { padding: 6px 10px; text-align: left; }
+        .tide-table th { border-bottom: 1px solid var(--border); }
+        .markdown-content { white-space: normal; }
+        .markdown-content h1, .markdown-content h2, .markdown-content h3,
+        .markdown-content h4, .markdown-content h5, .markdown-content h6 {
+            margin: 1em 0 .5em;
+        }
+        .markdown-content p, .markdown-content ul, .markdown-content ol,
+        .markdown-content pre { margin: .5em 0; }
+        .markdown-content pre { white-space: pre-wrap; }
+
+        @media (max-width: 600px) {
+            body { padding: 28px 15px; }
+        }
+    </style>
+</head>
+<body>
+    <main class="page-shell">
+        <header class="masthead">
+            <p class="eyebrow">Surf Fishing Conditions</p>
+            <h1>Find your fishing window.</h1>
+            <p class="intro">Choose a shoreline and date to check the conditions before you head out.</p>
+        </header>
+
+        <section class="panel" aria-labelledby="locationHeading">
+            <h2 id="locationHeading">Plan your session</h2>
+            <p class="panel-copy">Pick a NOAA shoreline station and the day you want to fish.</p>
+            <form id="forecastForm">
+                <div class="form-group">
+                    <label for="stateSelect">State</label>
+                    <select id="stateSelect">
+                        <option value="">-- Choose a State --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="citySelect">Shoreline station</label>
+                    <select id="citySelect" required disabled>
+                        <option value="">-- Choose a State First --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="dateSelect">Fishing date</label>
+                    <input id="dateSelect" type="date" required>
+                </div>
+
+                <button class="submit-button" id="forecastSubmit" type="submit">Get Fishing Conditions</button>
+            </form>
+            <div id="forecastResult" aria-live="polite"></div>
+        </section>
+    </main>
+
+    <script>
+        const API_BASE = "/api";
+        const stateSelect = document.getElementById("stateSelect");
+        const citySelect = document.getElementById("citySelect");
+        const forecastForm = document.getElementById("forecastForm");
+        const dateSelect = document.getElementById("dateSelect");
+        const forecastSubmit = document.getElementById("forecastSubmit");
+        const forecastResult = document.getElementById("forecastResult");
+
+        function appendMarkdownInline(parent, text) {
+            const pattern = /(\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\*[^*\n]+\*|_[^_\n]+_)/g;
+            let lastIndex = 0;
+
+            for (const match of text.matchAll(pattern)) {
+                const token = match[0];
+                const start = match.index;
+                parent.append(document.createTextNode(text.slice(lastIndex, start)));
+
+                const isStrong = token.startsWith("**") || token.startsWith("__");
+                const isCode = token.startsWith("`");
+                const element = document.createElement(
+                    isStrong ? "strong" : isCode ? "code" : "em"
+                );
+                const delimiterLength = isStrong ? 2 : 1;
+                element.textContent = token.slice(delimiterLength, -delimiterLength);
+                parent.append(element);
+                lastIndex = start + token.length;
+            }
+
+            parent.append(document.createTextNode(text.slice(lastIndex)));
+        }
+
+        function renderMarkdown(markdown) {
+            const content = document.createElement("div");
+            content.className = "markdown-content";
+            let paragraphLines = [];
+            let list = null;
+            let codeLines = null;
+
+            function flushParagraph() {
+                if (paragraphLines.length === 0) return;
+                const paragraph = document.createElement("p");
+                appendMarkdownInline(paragraph, paragraphLines.join(" "));
+                content.append(paragraph);
+                paragraphLines = [];
+            }
+
+            function flushList() {
+                list = null;
+            }
+
+            for (const line of markdown.split(/\r?\n/)) {
+                if (codeLines !== null) {
+                    if (/^```/.test(line)) {
+                        const pre = document.createElement("pre");
+                        const code = document.createElement("code");
+                        code.textContent = codeLines.join("\n");
+                        pre.append(code);
+                        content.append(pre);
+                        codeLines = null;
+                    } else {
+                        codeLines.push(line);
+                    }
+                    continue;
+                }
+
+                if (/^```/.test(line)) {
+                    flushParagraph();
+                    flushList();
+                    codeLines = [];
+                    continue;
+                }
+
+                const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
+                if (headingMatch) {
+                    flushParagraph();
+                    flushList();
+                    const heading = document.createElement(`h${headingMatch[1].length}`);
+                    appendMarkdownInline(heading, headingMatch[2]);
+                    content.append(heading);
+                    continue;
+                }
+
+                const listMatch = line.match(/^\s*([-*+]|\d+[.)])\s+(.+)$/);
+                if (listMatch) {
+                    flushParagraph();
+                    const listType = /^\d/.test(listMatch[1]) ? "ol" : "ul";
+                    if (!list || list.tagName.toLowerCase() !== listType) {
+                        flushList();
+                        list = document.createElement(listType);
+                        content.append(list);
+                    }
+                    const item = document.createElement("li");
+                    appendMarkdownInline(item, listMatch[2]);
+                    list.append(item);
+                    continue;
+                }
+
+                if (line.trim() === "") {
+                    flushParagraph();
+                    flushList();
+                    continue;
+                }
+
+                flushList();
+                paragraphLines.push(line.trim());
+            }
+
+            flushParagraph();
+            flushList();
+            if (codeLines !== null) {
+                const pre = document.createElement("pre");
+                const code = document.createElement("code");
+                code.textContent = codeLines.join("\n");
+                pre.append(code);
+                content.append(pre);
+            }
+            return content;
+        }
+
+        // 1. Load States immediately when page loads
+        async function loadStates() {
+            try {
+                const response = await fetch(`${API_BASE}/states`);
+                if (!response.ok) {
+                    throw new Error(`Failed to load states: ${response.status}`);
+                }
+                const states = await response.json();
+                
+                states.forEach(state => {
+                    const option = document.createElement("option");
+                    option.value = state;
+                    option.textContent = state;
+                    // if (state === "FL") {
+                    //     option.selected = true; 
+                    // }                    
+                    stateSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error("Error fetching states:", error);
+            }
+        }
+
+        // 2. Listen for State changes to populate Cities
+        stateSelect.addEventListener("change", async (event) => {
+            const selectedState = event.target.value;
+
+            // Reset City dropdown
+            citySelect.innerHTML = '<option value="">-- Choose a Station --</option>';
+            
+            if (!selectedState) {
+                citySelect.disabled = true;
+                return;
+            }
+
+            citySelect.disabled = true;
+            try {
+                // Fetch only cities for the selected state
+                const response = await fetch(
+                    `${API_BASE}/cities?state=${encodeURIComponent(selectedState)}`
+                );
+                if (!response.ok) {
+                    throw new Error(`Failed to load stations: ${response.status}`);
+                }
+                const cities = (await response.json()).sort((a, b) =>
+                    a.name.localeCompare(b.name)
+                );
+
+                cities.forEach(city => {
+                    const option = document.createElement("option");
+                    option.value = city.name;
+                    option.textContent = city.name;
+                    // if (city.name === "Fort Lauderdale, Andrews Ave. Bridge") {
+                    //     option.selected = true; 
+                    // }                    
+
+                    citySelect.appendChild(option);
+                });
+
+                citySelect.disabled = cities.length === 0;
+            } catch (error) {
+                console.error("Error fetching cities:", error);
+                citySelect.disabled = true;
+            }
+        });
+
+        forecastForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            forecastSubmit.disabled = true;
+            forecastResult.textContent = "Loading forecast...";
+
+            const params = new URLSearchParams({
+                city: citySelect.value,
+                state: stateSelect.value,                
+                date: dateSelect.value,
+            });
+
+            // Create a Map
+            const labels = new Map([
+            ["city", "City"],
+            ["date", "Date"],
+            ["precipitation_probability", "Chance of Precipitation"],
+            ["start_time", "Precipitation Starting Time"],
+            ["temp", "Temparature"],
+            ["wind_speed_max", "Wind Speed (Max)"],
+            ["wind_speed_min", "Wind Speed (Min)"],
+            ["wind_direction", "Wind Direction"],
+            ["moon_current_phase", "Current Moon Phase"],
+            ["moon_closest_phase", "Closest Moon Phase"],
+            ["moon_closest_phase_date","Closest Moon Phase Date"],
+            ["moon_brightness", "Moon Brightness"],
+            ["predictions", "Tides"],
+            ["detailed_forecast", "Forecast"],
+            ["ai_evaluation", "Overall Recommendation"],            
+            ]);
+
+            try {
+                const response = await fetch(
+                    `/forecast/get_forecast?${params.toString()}`
+                );
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.detail || `Forecast request failed: ${response.status}`);
+                }
+
+                const entries = Object.entries(result);
+                const lastEntry = entries.pop();
+                const details = document.createElement("table");
+                for (const [key, value] of entries) {
+                    const row = document.createElement("tr");
+                    const term = document.createElement("td");
+                    term.setAttribute("style", "vertical-align: top;")
+                    term.textContent = labels.get(key);
+                    row.append(term)
+
+                    const definition = document.createElement("td");
+                    if (key === "predictions" && Array.isArray(value)) {
+                        const tides = document.createElement("table");
+                        tides.className = "tide-table";
+                        const headings = [
+                            ["type", "Type"],
+                            ["t", "Time"],
+                            ["v", "Height (ft)"],
+                        ];
+                        const header = document.createElement("thead");
+                        const headerRow = document.createElement("tr");
+                        for (const [, label] of headings) {
+                            const cell = document.createElement("th");
+                            cell.scope = "col";
+                            cell.textContent = label;
+                            headerRow.append(cell);
+                        }
+                        header.append(headerRow);
+
+                        const body = document.createElement("tbody");
+                        for (const prediction of value) {
+                            const tideRow = document.createElement("tr");
+                            for (const [field] of headings) {
+                                const cell = document.createElement("td");
+                                const fieldValue =
+                                    prediction !== null && typeof prediction === "object"
+                                        ? prediction[field]
+                                        : null;
+                                cell.textContent = String(fieldValue ?? "");
+                                tideRow.append(cell);
+                            }
+                            body.append(tideRow);
+                        }
+                        tides.append(header, body);
+                        definition.append(tides);
+                    } else {
+                        definition.textContent =
+                            value !== null && typeof value === "object"
+                                ? JSON.stringify(value, null, 2)
+                                : String(value);
+                    }
+                    row.append(definition)
+
+                    details.append(row);
+                }
+
+                const output = [details];
+                if (lastEntry) {
+                    const [key, value] = lastEntry;
+                    const evaluation = document.createElement("div");
+                    evaluation.className = "forecast-evaluation";
+                    const heading = document.createElement("h3");
+                    heading.textContent = labels.get(key);
+
+                    evaluation.append(heading, renderMarkdown(String(value ?? "")));
+                    output.push(evaluation);
+                }
+                forecastResult.replaceChildren(...output);
+
+            } catch (error) {
+                console.error("Error fetching forecast:", error);
+                forecastResult.textContent = `Unable to load forecast: ${error.message}`;
+            } finally {
+                forecastSubmit.disabled = false;
+            }
+        });
+
+        // Initialize application
+        loadStates();
+    </script>
+</body>
+</html>
