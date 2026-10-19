@@ -98,6 +98,16 @@
         .tide-table { border-collapse: collapse; white-space: normal; }
         .tide-table th, .tide-table td { padding: 6px 10px; text-align: left; }
         .tide-table th { border-bottom: 1px solid var(--border); }
+        .about-section { margin-top: 24px; }
+        .about-section summary {
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 800;
+        }
+        .about-content { margin-top: 18px; color: var(--muted); line-height: 1.6; }
+        .about-content h3 { margin: 1.25em 0 .4em; color: var(--ink); font-size: 1rem; }
+        .about-content p { margin: .6em 0; }
+        .about-content ul { padding-left: 1.25em; }
         .markdown-content { white-space: normal; }
         .markdown-content h1, .markdown-content h2, .markdown-content h3,
         .markdown-content h4, .markdown-content h5, .markdown-content h6 {
@@ -147,6 +157,63 @@
             </form>
             <div id="forecastResult" aria-live="polite"></div>
         </section>
+
+        <details class="panel about-section">
+            <summary>About this website</summary>
+            <div class="about-content">
+                <p>
+                    Surf Fishin' Time combines shoreline, weather, tide, and moon
+                    information for a selected station and date, then asks an
+                    OpenAI agent to provide an overall fishing recommendation.
+                </p>
+
+                <h3>How it works</h3>
+                <p>
+                    This page is served by a Python FastAPI application. The
+                    browser calls the app's <code>/api/states</code> and
+                    <code>/api/cities</code> endpoints to populate the station
+                    selectors, then requests
+                    <code>/forecast/get_forecast</code> for the selected station
+                    and date. The backend assembles the provider data and returns
+                    it to the page for display and submits to OpenAI for fishing
+                    outlook generation.
+                </p>
+
+                <h3>External APIs</h3>
+                <ul>
+                    <li>
+                        NOAA Tides &amp; Currents provides tide-prediction station
+                        metadata and tide predictions.
+                    </li>
+                    <li>
+                        The National Weather Service API provides local forecast
+                        grid data and forecast periods.
+                    </li>
+                    <li>
+                        Open-Meteo's geocoding API resolves city names to
+                        coordinates and time zones.
+                    </li>
+                    <li>
+                        The U.S. Naval Observatory API provides moon-phase data.
+                    </li>
+                    <li>
+                        The OpenAI API runs the configured agent to generate a
+                        fishing recommendation from the assembled conditions.
+                    </li>
+                </ul>
+
+                <h3>AWS services</h3>
+                <ul>
+                    <li><em>Amazon ECS with AWS Fargate</em>: Runs the containerized Python backend without requiring server management.</li>
+                    <li><em>Amazon ECR</em>: Stores Docker images used to deploy the backend.</li>
+                    <li><em>Application Load Balancer</em>: Routes incoming HTTP requests to the backend service.</li>
+                    <li><em>AWS Secrets Manager</em>: Securely stores the OpenAI API key.</li>
+                    <li><em>Amazon CloudWatch</em>: Collects application logs for monitoring and troubleshooting.</li>
+                    <li><em>AWS IAM</em>: Manage roles and permissions</li>
+                    <li><em>VPC and security groups</em>: Manage permissions and network access.</li>
+                </ul>
+            </div>
+        </details>
     </main>
 
     <script>

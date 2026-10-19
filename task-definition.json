@@ -1,0 +1,50 @@
+{
+  "family": "fishintime-backend",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::462025067652:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "fishintime-backend",
+      "image": "462025067652.dkr.ecr.us-east-2.amazonaws.com/fishintime-backend:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "AWS_REGION",
+          "value": "us-east-2"
+        },
+        {
+          "name": "AWS_SECRET_NAME",
+          "value": "FishinSecret"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "FishinSecret_OpenAI",
+          "valueFrom": "arn:aws:secretsmanager:us-east-2:462025067652:secret:FishinSecret_OpenAI-q0M642"
+        },
+        {
+          "name": "FishinSecret_Agent_Id",
+          "valueFrom": "arn:aws:secretsmanager:us-east-2:462025067652:secret:FishinSecret_Agent_Id-vqIBkc"
+        }
+    ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/fishintime-backend",
+          "awslogs-region": "us-east-2",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
+

@@ -1,0 +1,18 @@
+[
+    {
+        "Status": "PRIMARY",
+        "RolloutState": "FAILED",
+        "TaskDefinition": "arn:aws:ecs:us-east-2:462025067652:task-definition/fishintime-backend-task:1",
+        "Desired": 1,
+        "Running": 0,
+        "Failed": 3
+    },
+    {
+        "Status": "ACTIVE",
+        "RolloutState": "IN_PROGRESS",
+        "TaskDefinition": "arn:aws:ecs:us-east-2:462025067652:task-definition/fishintime-backend-task:1",
+        "Desired": 1,
+        "Running": 0,
+        "Failed": 2
+    }
+]

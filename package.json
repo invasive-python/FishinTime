@@ -1,0 +1,6 @@
+{
+  "name": "fishintime",
+  "devDependencies": {
+    "@aws-amplify/backend-cli": "^1.10.0"
+  }
+}

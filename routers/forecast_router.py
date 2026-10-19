@@ -1,10 +1,14 @@
-import requests
-from datetime import datetime
-from fastapi import APIRouter, HTTPException
 import os
+from datetime import datetime
 from pathlib import Path
+
+import boto3
+import requests
+from botocore.exceptions import BotoCoreError, ClientError
 from dotenv import load_dotenv
+from fastapi import APIRouter, HTTPException, Request
 from openai import OpenAI, OpenAIError
+
 import services.forecast_service as forecast_service
 
 from models.weather_schemas import ForecastResponse
@@ -12,6 +16,35 @@ from models.weather_schemas import ForecastResponse
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 router = APIRouter()
+
+
+class SecretsManagerError(RuntimeError):
+    """Raised when the application cannot retrieve its configured secret."""
+
+
+def get_secret(secret_name: str) -> str:
+    region_name = (
+        os.getenv("AWS_REGION")
+        or os.getenv("AWS_DEFAULT_REGION")
+        or "us-east-2"
+    )
+
+    try:
+        response = boto3.client(
+            "secretsmanager", region_name=region_name
+        ).get_secret_value(SecretId=secret_name)
+    except (BotoCoreError, ClientError) as exc:
+        raise SecretsManagerError(
+            f"Could not retrieve secret '{secret_name}' from AWS Secrets Manager."
+        ) from exc
+
+    secret_string = response.get("SecretString")
+    if not isinstance(secret_string, str) or not secret_string.strip():
+        raise SecretsManagerError(
+            f"Secret '{secret_name}' must contain a non-empty SecretString."
+        )
+    return secret_string
+
 
 def is_today_or_future(date_string: str, date_format: str = "%Y-%m-%d") -> bool:
     try:
@@ -29,7 +62,9 @@ def is_today_or_future(date_string: str, date_format: str = "%Y-%m-%d") -> bool:
     summary="Get forecast periods for a city and date",
     tags=["get_forecast"],
 )
-def get_forecast(city: str, state: str, date: str) -> ForecastResponse:
+def get_forecast(
+    request: Request, city: str, state: str, date: str
+) -> ForecastResponse:
     try:
         if not is_today_or_future(date):
             raise HTTPException(status_code=400, detail="Date must be today or in the future.")
@@ -55,38 +90,30 @@ def get_forecast(city: str, state: str, date: str) -> ForecastResponse:
         print("tides: " + str(forecast.predictions))
         print("forecast: " + forecast.detailed_forecast)
 
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise HTTPException(
-                status_code=500,
-                detail="OPENAI_API_KEY is not set in the environment or .env file.",
-            )
-
-        client = OpenAI(api_key=api_key)
+        api_key = request.app.state.openai_api_key
         prompt = f"""Using the information this JSON: {forecast.model_dump_json()}
                 make a judgment as to whether or not it is a good time to go fishing
                 from the surf or in a boat.
                 """;
 
-        with client.beta.agents.sessions.create(
-            agent_id=os.getenv("AGENT_ID"),
-            environment={"type": "none"},
-            input=prompt,
-            stream=True,
-        ).with_result_collection() as stream:
-            result = stream.get_final_result()
-            forecast.ai_evaluation = result.output_text
+        try:
+            client = OpenAI(api_key=api_key)
+            with client.beta.agents.sessions.create(
+                agent_id=request.app.state.openai_agent_id,
+                environment={"type": "none"},
+                input=prompt,
+                stream=True,
+            ).with_result_collection() as stream:
+                result = stream.get_final_result()
+                forecast.ai_evaluation = result.output_text
+        except OpenAIError as exc:
+            forecast.ai_evaluation = f"AI evaluation unavailable: {exc}"
 
-        print(result.output_text)
+        print(forecast.ai_evaluation)
         return forecast
 
     except HTTPException:
         raise
-    except OpenAIError as exc:
-        raise HTTPException(
-            status_code=502,
-            detail=f"OpenAI agent request failed: {exc}",
-        ) from exc
     except (requests.RequestException, KeyError, TypeError, ValueError) as exc:
         raise HTTPException(
             status_code=502,

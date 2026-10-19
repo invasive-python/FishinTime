@@ -1,5 +1,6 @@
 fastapi
 openai
+boto3
 python-dotenv
 requests
 uvicorn
