@@ -1,50 +1,94 @@
 {
-  "family": "fishintime-backend",
-  "networkMode": "awsvpc",
-  "requiresCompatibilities": ["FARGATE"],
-  "cpu": "256",
-  "memory": "512",
-  "executionRoleArn": "arn:aws:iam::462025067652:role/ecsTaskExecutionRole",
-  "containerDefinitions": [
-    {
-      "name": "fishintime-backend",
-      "image": "462025067652.dkr.ecr.us-east-2.amazonaws.com/fishintime-backend:latest",
-      "essential": true,
-      "portMappings": [
+    "taskDefinitionArn": "arn:aws:ecs:us-east-2:462025067652:task-definition/fishintime-backend:10",
+    "containerDefinitions": [
         {
-          "containerPort": 8000,
-          "protocol": "tcp"
-        }
-      ],
-      "environment": [
-        {
-          "name": "AWS_REGION",
-          "value": "us-east-2"
-        },
-        {
-          "name": "AWS_SECRET_NAME",
-          "value": "FishinSecret"
-        }
-      ],
-      "secrets": [
-        {
-          "name": "FishinSecret_OpenAI",
-          "valueFrom": "arn:aws:secretsmanager:us-east-2:462025067652:secret:FishinSecret_OpenAI-q0M642"
-        },
-        {
-          "name": "FishinSecret_Agent_Id",
-          "valueFrom": "arn:aws:secretsmanager:us-east-2:462025067652:secret:FishinSecret_Agent_Id-vqIBkc"
+            "name": "fishintime-backend",
+            "image": "462025067652.dkr.ecr.us-east-2.amazonaws.com/fishintime-backend:latest",
+            "cpu": 0,
+            "portMappings": [
+                {
+                    "containerPort": 8000,
+                    "hostPort": 8000,
+                    "protocol": "tcp"
+                }
+            ],
+            "essential": true,
+            "environment": [
+                {
+                    "name": "AWS_SECRET_NAME",
+                    "value": "FishinSecret"
+                },
+                {
+                    "name": "AWS_REGION",
+                    "value": "us-east-2"
+                }
+            ],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "secrets": [
+                {
+                    "name": "FishinSecret_OpenAI",
+                    "valueFrom": "arn:aws:secretsmanager:us-east-2:462025067652:secret:FishinSecret_OpenAI-q0M642"
+                },
+                {
+                    "name": "FishinSecret_Agent_Id",
+                    "valueFrom": "arn:aws:secretsmanager:us-east-2:462025067652:secret:FishinSecret_Agent_Id-vqIBkc"
+                }
+            ],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/fishintime-backend",
+                    "awslogs-region": "us-east-2",
+                    "awslogs-stream-prefix": "ecs"
+                }
+            },
+            "systemControls": []
         }
     ],
-      "logConfiguration": {
-        "logDriver": "awslogs",
-        "options": {
-          "awslogs-group": "/ecs/fishintime-backend",
-          "awslogs-region": "us-east-2",
-          "awslogs-stream-prefix": "ecs"
+    "family": "fishintime-backend",
+    "executionRoleArn": "arn:aws:iam::462025067652:role/ecsTaskExecutionRole",
+    "networkMode": "awsvpc",
+    "revision": 10,
+    "volumes": [],
+    "status": "ACTIVE",
+    "requiresAttributes": [
+        {
+            "name": "com.amazonaws.ecs.capability.logging-driver.awslogs"
+        },
+        {
+            "name": "ecs.capability.execution-role-awslogs"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.ecr-auth"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.19"
+        },
+        {
+            "name": "ecs.capability.secrets.asm.environment-variables"
+        },
+        {
+            "name": "ecs.capability.execution-role-ecr-pull"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.18"
+        },
+        {
+            "name": "ecs.capability.task-eni"
         }
-      }
-    }
-  ]
+    ],
+    "placementConstraints": [],
+    "compatibilities": [
+        "EC2",
+        "MANAGED_INSTANCES",
+        "FARGATE"
+    ],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "256",
+    "memory": "512",
+    "registeredAt": "2026-10-19T18:23:13.326000-04:00",
+    "registeredBy": "arn:aws:iam::462025067652:user/fishintime-local-dev"
 }
-

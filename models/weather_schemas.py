@@ -2,6 +2,8 @@ from datetime import date, datetime
 
 from pydantic import BaseModel
 
+from typing import Optional
+
 
 class LocationRequest(BaseModel):
     state: str
@@ -44,10 +46,10 @@ class ForecastResponse(BaseModel):
     moon_closest_phase_date: str
     moon_brightness: str
     predictions: list[dict]
-    waves: list[dict]         # hourly wave data
-    wave_height: list[dict]   # wave height, current? TODO: get high/low tide values, _max and _min
-    wave_direction: list[dict]
-    wave_peak_period: list[dict]
-    sea_level_height: list[dict]
+    waves: Optional[list[dict]] = None
+    wave_height: Optional[list[dict]] = None
+    wave_direction: Optional[list[dict]] = None
+    wave_peak_period: Optional[list[dict]] = None
+    sea_level_height: Optional[list[dict]] = None
     detailed_forecast: str
     ai_evaluation: str
