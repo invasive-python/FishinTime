@@ -52,4 +52,10 @@ class ForecastResponse(BaseModel):
     wave_peak_period: Optional[list[dict]] = None
     sea_level_height: Optional[list[dict]] = None
     detailed_forecast: str
-    ai_evaluation: str
+    ai_evaluation: str = ""
+    evaluation_id: str | None = None
+
+class EvaluationJobResponse(BaseModel):
+    status: str
+    ai_evaluation: str | None = None
+    error: str | None = None

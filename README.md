@@ -16,6 +16,20 @@ redeploy the app after rotating the secret so the new value is loaded.
 
 When running on AWS, grant the application's IAM role
 `secretsmanager:GetSecretValue` for this secret. For local development,
-configure AWS credentials through the AWS CLI/profile or standard AWS
-environment variables; do not commit credentials or a `.env` file containing
-the API key. `.env` is excluded from Git.
+configure an AWS CLI profile with access to both secrets. In the AWS console,
+create an IAM principal for local development (do not create access keys for
+the root account), grant it `secretsmanager:GetSecretValue` for the two
+application secrets, and create an access key. Use least-privilege permissions;
+the resource ARNs are listed in `fishintime-task-secrets-policy.json`.
+
+```sh
+aws configure --profile fishintime
+AWS_PROFILE=fishintime AWS_REGION=us-east-2 uvicorn api:app --reload
+```
+
+The application calls Secrets Manager directly in both local development and
+AWS deployments. boto3 uses the configured AWS profile/credentials locally and
+the task's IAM role on AWS. It does not load the secret values from `.env`.
+Check the local credentials with `aws sts get-caller-identity
+--profile fishintime`. Do not commit AWS credentials or secret values; `.env`
+is excluded from Git.

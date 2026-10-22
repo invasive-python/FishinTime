@@ -2,14 +2,13 @@ import unittest
 from datetime import date
 from unittest.mock import Mock, patch
 
-from openai import OpenAIError
 import requests
-from fastapi import HTTPException
+from fastapi import BackgroundTasks, HTTPException
 from fastapi.testclient import TestClient
 
 from api import app
 from models.weather_schemas import ForecastPeriod
-from routers.forecast_router import get_forecast
+from routers.forecast_router import get_evaluation_status, get_forecast
 from services.weather_service import _map_noaa_period
 
 
@@ -68,6 +67,7 @@ class ForecastRouteTests(unittest.TestCase):
         with self.assertRaises(HTTPException) as raised:
             get_forecast(
                 request=Mock(),
+                background_tasks=BackgroundTasks(),
                 city="Miami",
                 state="FL",
                 date=date.today().isoformat(),
@@ -78,15 +78,9 @@ class ForecastRouteTests(unittest.TestCase):
         serve_forecast.assert_called_once()
 
     @patch(
-        "routers.forecast_router.OpenAI",
-        side_effect=OpenAIError("agent unavailable"),
-    )
-    @patch(
         "routers.forecast_router.forecast_service.serve_forecast",
     )
-    def test_openai_failure_returns_forecast_with_error_message(
-        self, serve_forecast, _openai
-    ):
+    def test_forecast_queues_ai_evaluation(self, serve_forecast):
         forecast = Mock()
         forecast.city = "Miami"
         forecast.date = date.today().isoformat()
@@ -105,15 +99,19 @@ class ForecastRouteTests(unittest.TestCase):
         forecast.model_dump_json.return_value = "{}"
         serve_forecast.return_value = forecast
 
+        evaluation_jobs = {}
+        background_tasks = BackgroundTasks()
         response = get_forecast(
             request=Mock(
                 app=Mock(
                     state=Mock(
                         openai_api_key="test-api-key",
                         openai_agent_id="test-agent-id",
+                        evaluation_jobs=evaluation_jobs,
                     )
                 )
             ),
+            background_tasks=background_tasks,
             city="Miami",
             state="FL",
             date=date.today().isoformat(),
@@ -121,10 +119,37 @@ class ForecastRouteTests(unittest.TestCase):
 
         self.assertIs(response, forecast)
         self.assertEqual(forecast.temp, 80)
-        self.assertEqual(
-            forecast.ai_evaluation, "AI evaluation unavailable: agent unavailable"
-        )
+        self.assertIsNotNone(response.evaluation_id)
+        self.assertEqual(evaluation_jobs[response.evaluation_id]["status"], "pending")
+        self.assertEqual(len(background_tasks.tasks), 1)
         serve_forecast.assert_called_once()
+
+    def test_evaluation_status_returns_completed_result(self):
+        request = Mock(
+            app=Mock(
+                state=Mock(
+                    evaluation_jobs={
+                        "job-id": {
+                            "status": "completed",
+                            "ai_evaluation": "Fish at dawn.",
+                        }
+                    }
+                )
+            )
+        )
+
+        response = get_evaluation_status("job-id", request)
+
+        self.assertEqual(response.status, "completed")
+        self.assertEqual(response.ai_evaluation, "Fish at dawn.")
+
+    def test_evaluation_status_returns_not_found_for_unknown_job(self):
+        request = Mock(app=Mock(state=Mock(evaluation_jobs={})))
+
+        with self.assertRaises(HTTPException) as raised:
+            get_evaluation_status("missing", request)
+
+        self.assertEqual(raised.exception.status_code, 404)
 
     def test_openapi_registers_current_forecast_contract(self):
         schema = app.openapi()

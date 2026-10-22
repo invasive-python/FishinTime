@@ -46,6 +46,7 @@
     }
   ],
   "family": "fishintime-backend",
+  "taskRoleArn": "arn:aws:iam::462025067652:role/fishintime-task-role",
   "executionRoleArn": "arn:aws:iam::462025067652:role/ecsTaskExecutionRole",
   "networkMode": "awsvpc",
   "volumes": [],
@@ -54,6 +55,5 @@
     "FARGATE"
   ],
   "cpu": "256",
-  "memory": "512",
-  "taskRoleArn": "arn:aws:iam::462025067652:role/fishintime-task-role"
+  "memory": "512"
 }

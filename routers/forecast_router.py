@@ -1,21 +1,21 @@
+import logging
 import os
+import uuid
 from datetime import datetime
-from pathlib import Path
 
 import boto3
+import json
 import requests
 from botocore.exceptions import BotoCoreError, ClientError
-from dotenv import load_dotenv
-from fastapi import APIRouter, HTTPException, Request
-from openai import OpenAI, OpenAIError
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+from openai import OpenAI
 
 import services.forecast_service as forecast_service
 
-from models.weather_schemas import ForecastResponse
-
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+from models.weather_schemas import EvaluationJobResponse, ForecastResponse
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class SecretsManagerError(RuntimeError):
@@ -33,9 +33,17 @@ def get_secret(secret_name: str) -> str:
         response = boto3.client(
             "secretsmanager", region_name=region_name
         ).get_secret_value(SecretId=secret_name)
-    except (BotoCoreError, ClientError) as exc:
+    except ClientError as exc:
+        error_code = exc.response.get("Error", {}).get("Code", "Unknown")
         raise SecretsManagerError(
-            f"Could not retrieve secret '{secret_name}' from AWS Secrets Manager."
+            f"Could not retrieve secret '{secret_name}' from AWS Secrets Manager "
+            f"in region '{region_name}' (AWS error: {error_code})."
+        ) from exc
+    except BotoCoreError as exc:
+        raise SecretsManagerError(
+            f"Could not retrieve secret '{secret_name}' from AWS Secrets Manager "
+            f"in region '{region_name}' ({type(exc).__name__}). Check the AWS "
+            "credentials and configuration available to this process."
         ) from exc
 
     secret_string = response.get("SecretString")
@@ -63,7 +71,11 @@ def is_today_or_future(date_string: str, date_format: str = "%Y-%m-%d") -> bool:
     tags=["get_forecast"],
 )
 def get_forecast(
-    request: Request, city: str, state: str, date: str
+    request: Request,
+    background_tasks: BackgroundTasks,
+    city: str,
+    state: str,
+    date: str,
 ) -> ForecastResponse:
     try:
         if not is_today_or_future(date):
@@ -75,6 +87,17 @@ def get_forecast(
                 status_code=404,
                 detail=f"No forecast or NOAA tide station found for {city} on {date}.",
             )
+
+        evaluation_id = str(uuid.uuid4())
+        evaluation_jobs = getattr(request.app.state, "evaluation_jobs", None)
+        if evaluation_jobs is None:
+            evaluation_jobs = {}
+            request.app.state.evaluation_jobs = evaluation_jobs
+        evaluation_jobs[evaluation_id] = {"status": "pending"}
+        background_tasks.add_task(
+            get_evaluation, request, forecast, evaluation_id
+        )
+        forecast.evaluation_id = evaluation_id
 
         print(f"{forecast.city} Fishing Forecast for {forecast.date}:")
         print("----------------------")
@@ -90,26 +113,6 @@ def get_forecast(
         print("tides: " + str(forecast.predictions))
         print("forecast: " + forecast.detailed_forecast)
 
-        api_key = request.app.state.openai_api_key
-        prompt = f"""Using the information this JSON: {forecast.model_dump_json()}
-                make a judgment as to whether or not it is a good time to go fishing
-                from the surf or in a boat.
-                """;
-
-        try:
-            client = OpenAI(api_key=api_key)
-            with client.beta.agents.sessions.create(
-                agent_id=request.app.state.openai_agent_id,
-                environment={"type": "none"},
-                input=prompt,
-                stream=True,
-            ).with_result_collection() as stream:
-                result = stream.get_final_result()
-                forecast.ai_evaluation = result.output_text
-        except OpenAIError as exc:
-            forecast.ai_evaluation = f"AI evaluation unavailable: {exc}"
-
-        print(forecast.ai_evaluation)
         return forecast
 
     except HTTPException:
@@ -119,3 +122,52 @@ def get_forecast(
             status_code=502,
             detail=f"External provider request or response failed: {exc}",
         ) from exc 
+
+@router.get(
+    "/forecast/evaluation/{evaluation_id}",
+    response_model=EvaluationJobResponse,
+    summary="Get the status and result of an AI fishing evaluation",
+    tags=["get_forecast"],
+)
+def get_evaluation_status(
+    evaluation_id: str, request: Request
+) -> EvaluationJobResponse:
+    evaluation_jobs = getattr(request.app.state, "evaluation_jobs", {})
+    job = evaluation_jobs.get(evaluation_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="AI evaluation not found.")
+    return EvaluationJobResponse(**job)
+
+
+def get_evaluation(
+    request: Request, forecast: ForecastResponse, evaluation_id: str
+) -> None:
+    job = request.app.state.evaluation_jobs[evaluation_id]
+    try:
+        api_key = request.app.state.openai_api_key
+        secret = json.loads(api_key)["OPENAI_API_KEY"]
+
+        agent_key = request.app.state.openai_agent_id
+        agent_secret = json.loads(agent_key)["AGENT_ID"]
+
+        prompt = f"""Using the information this JSON: {forecast.model_dump_json()}
+                make a judgment as to whether or not it is a good day to go fishing
+                from the surf or in a boat, and report the ideal times to fish. If
+                possible, return information about the species of fish currently
+                being caught, or historically being caught at the selected time of year.
+                Do not mention the JSON or any input other than the user-provided state,
+                city and date.
+                """;
+
+        client = OpenAI(api_key=secret)
+        with client.beta.agents.sessions.create(
+            agent_id=agent_secret,
+            environment={"type": "none"},
+            input=prompt,
+            stream=True,
+        ).with_result_collection() as stream:
+            result = stream.get_final_result()
+        job.update(status="completed", ai_evaluation=result.output_text)
+    except Exception as exc:
+        logger.exception("AI evaluation failed for job %s.", evaluation_id)
+        job.update(status="failed", error=f"AI evaluation unavailable: {exc}")

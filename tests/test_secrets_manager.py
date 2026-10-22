@@ -45,6 +45,7 @@ class SecretsManagerTests(unittest.TestCase):
             get_secret("OPENAI_API_KEY")
 
         self.assertNotIn("access denied", str(raised.exception))
+        self.assertIn("AccessDeniedException", str(raised.exception))
 
 
 if __name__ == "__main__":

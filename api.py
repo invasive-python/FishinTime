@@ -21,6 +21,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         app.state.openai_api_key = get_secret("FishinSecret_OpenAI")
         app.state.openai_agent_id = get_secret("FishinSecret_Agent_Id")
+        app.state.evaluation_jobs = {}
     except SecretsManagerError as exc:
         logger.exception("Failed to load OpenAI credentials during startup.")
         raise RuntimeError(

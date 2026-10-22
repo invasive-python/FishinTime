@@ -1,5 +1,5 @@
 {
-    "taskDefinitionArn": "arn:aws:ecs:us-east-2:462025067652:task-definition/fishintime-backend:12",
+    "taskDefinitionArn": "arn:aws:ecs:us-east-2:462025067652:task-definition/fishintime-backend:11",
     "containerDefinitions": [
         {
             "name": "fishintime-backend",
@@ -47,9 +47,10 @@
         }
     ],
     "family": "fishintime-backend",
+    "taskRoleArn": "arn:aws:iam::462025067652:role/fishintime-task-role",
     "executionRoleArn": "arn:aws:iam::462025067652:role/ecsTaskExecutionRole",
     "networkMode": "awsvpc",
-    "revision": 10,
+    "revision": 11,
     "volumes": [],
     "status": "ACTIVE",
     "requiresAttributes": [
@@ -69,6 +70,9 @@
             "name": "ecs.capability.secrets.asm.environment-variables"
         },
         {
+            "name": "com.amazonaws.ecs.capability.task-iam-role"
+        },
+        {
             "name": "ecs.capability.execution-role-ecr-pull"
         },
         {
@@ -81,14 +85,14 @@
     "placementConstraints": [],
     "compatibilities": [
         "EC2",
-        "MANAGED_INSTANCES",
-        "FARGATE"
+        "FARGATE",
+        "MANAGED_INSTANCES"
     ],
     "requiresCompatibilities": [
         "FARGATE"
     ],
     "cpu": "256",
     "memory": "512",
-    "registeredAt": "2026-10-19T18:23:13.326000-04:00",
+    "registeredAt": "2026-10-20T17:19:33.146000-04:00",
     "registeredBy": "arn:aws:iam::462025067652:user/fishintime-local-dev"
 }

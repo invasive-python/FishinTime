@@ -95,6 +95,14 @@
             white-space: pre-wrap;
         }
         #forecastResult:empty { display: none; }
+        #evaluation {
+            margin-top: 18px;
+            padding: 16px;
+            border-radius: 12px;
+            color: var(--ink);
+            background: var(--soft);
+        }
+        #evaluation:empty { display: none; }
         .tide-table { border-collapse: collapse; white-space: normal; }
         .tide-table th, .tide-table td { padding: 6px 10px; text-align: left; }
         .tide-table th { border-bottom: 1px solid var(--border); }
@@ -108,6 +116,12 @@
         .about-content h3 { margin: 1.25em 0 .4em; color: var(--ink); font-size: 1rem; }
         .about-content p { margin: .6em 0; }
         .about-content ul { padding-left: 1.25em; }
+        .about-content img {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: #fff;
+        }
         .markdown-content { white-space: normal; }
         .markdown-content h1, .markdown-content h2, .markdown-content h3,
         .markdown-content h4, .markdown-content h5, .markdown-content h6 {
@@ -156,6 +170,7 @@
                 <button class="submit-button" id="forecastSubmit" type="submit">Get Fishing Conditions</button>
             </form>
             <div id="forecastResult" aria-live="polite"></div>
+            <div id="evaluation" aria-live="polite"></div>
         </section>
 
         <details class="panel about-section">
@@ -201,8 +216,7 @@
                         fishing recommendation from the assembled conditions.
                     </li>
                 </ul>
-
-                <h3>AWS services</h3>
+                <h3>AWS Architecture — Fishintime</h3>
                 <ul>
                     <li><em>Amazon ECS with AWS Fargate</em>: Runs the containerized Python backend without requiring server management.</li>
                     <li><em>Amazon ECR</em>: Stores Docker images used to deploy the backend.</li>
@@ -212,6 +226,9 @@
                     <li><em>AWS IAM</em>: Manage roles and permissions</li>
                     <li><em>VPC and security groups</em>: Manage permissions and network access.</li>
                 </ul>
+                <p>
+                    <img src="./res/mermaid-diagram.png" alt="diagram"/>
+                </p>
             </div>
         </details>
     </main>
@@ -224,6 +241,36 @@
         const dateSelect = document.getElementById("dateSelect");
         const forecastSubmit = document.getElementById("forecastSubmit");
         const forecastResult = document.getElementById("forecastResult");
+        const evaluation = document.getElementById("evaluation");
+        let activeEvaluationRequest = 0;
+
+        async function loadEvaluation(evaluationId, requestId) {
+            while (requestId === activeEvaluationRequest) {
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                const response = await fetch(
+                    `/forecast/evaluation/${encodeURIComponent(evaluationId)}`
+                );
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.detail || `Evaluation request failed: ${response.status}`);
+                }
+                if (requestId !== activeEvaluationRequest) return;
+
+                if (result.status === "completed") {
+                    evaluation.replaceChildren(
+                        Object.assign(document.createElement("h3"), {
+                            textContent: "Overall Recommendation",
+                        }),
+                        renderMarkdown(result.ai_evaluation || "")
+                    );
+                    return;
+                }
+                if (result.status === "failed") {
+                    evaluation.textContent = result.error || "The AI evaluation could not be prepared.";
+                    return;
+                }
+            }
+        }
 
         function appendMarkdownInline(parent, text) {
             const pattern = /(\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\*[^*\n]+\*|_[^_\n]+_)/g;
@@ -406,6 +453,15 @@
             event.preventDefault();
             forecastSubmit.disabled = true;
             forecastResult.textContent = "Loading forecast...";
+            const requestId = ++activeEvaluationRequest;
+            evaluation.replaceChildren(
+                Object.assign(document.createElement("h3"), {
+                    textContent: "Overall Recommendation",
+                }),
+                Object.assign(document.createElement("p"), {
+                    textContent: "An AI evaluation is being prepared. This may take a little while.",
+                })
+            );
 
             const params = new URLSearchParams({
                 city: citySelect.value,
@@ -429,7 +485,10 @@
             ["moon_brightness", "Moon Brightness"],
             ["predictions", "Tides"],
             ["detailed_forecast", "Forecast"],
-            ["ai_evaluation", "Overall Recommendation"],            
+            ["waves","Waves"],
+            ["wave_height", "Wave Height"],
+            ["wave_direction","Wave Direction"],
+            ["wave_peak_period", "Wave Peak Period"]
             ]);
 
             try {
@@ -441,8 +500,9 @@
                     throw new Error(result.detail || `Forecast request failed: ${response.status}`);
                 }
 
-                const entries = Object.entries(result);
-                const lastEntry = entries.pop();
+                const entries = Object.entries(result).filter(
+                    ([key]) => key !== "ai_evaluation" && key !== "evaluation_id"
+                );
                 const details = document.createElement("table");
                 for (const [key, value] of entries) {
                     const row = document.createElement("tr");
@@ -497,22 +557,22 @@
                     details.append(row);
                 }
 
-                const output = [details];
-                if (lastEntry) {
-                    const [key, value] = lastEntry;
-                    const evaluation = document.createElement("div");
-                    evaluation.className = "forecast-evaluation";
-                    const heading = document.createElement("h3");
-                    heading.textContent = labels.get(key);
-
-                    evaluation.append(heading, renderMarkdown(String(value ?? "")));
-                    output.push(evaluation);
+                forecastResult.replaceChildren(details);
+                if (result.evaluation_id) {
+                    loadEvaluation(result.evaluation_id, requestId).catch(error => {
+                        if (requestId === activeEvaluationRequest) {
+                            console.error("Error fetching AI evaluation:", error);
+                            evaluation.textContent = "Unable to load the AI evaluation.";
+                        }
+                    });
+                } else {
+                    evaluation.textContent = "AI evaluation was not started.";
                 }
-                forecastResult.replaceChildren(...output);
 
             } catch (error) {
                 console.error("Error fetching forecast:", error);
                 forecastResult.textContent = `Unable to load forecast: ${error.message}`;
+                evaluation.textContent = "The AI evaluation could not be started.";
             } finally {
                 forecastSubmit.disabled = false;
             }

@@ -9,6 +9,10 @@
       "args": ["api:app", "--reload"],
       "python": "${workspaceFolder}/.venv/bin/python",
       "noDebug": true,
+      "env": {
+        "AWS_PROFILE": "fishintime",
+        "AWS_REGION": "us-east-2"
+      },
       "console": "integratedTerminal",
       "justMyCode": true
     },
@@ -19,6 +23,10 @@
       "module": "uvicorn",
       "args": ["api:app", "--reload"],
       "python": "${workspaceFolder}/.venv/bin/python",
+      "env": {
+        "AWS_PROFILE": "fishintime",
+        "AWS_REGION": "us-east-2"
+      },
       "console": "integratedTerminal",
       "subProcess": true,
       "justMyCode": true
