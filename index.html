@@ -340,6 +340,16 @@
             parent.append(document.createTextNode(text.slice(lastIndex)));
         }
 
+        function formatWaveDirection(degrees) {
+            const directions = [
+                "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+                "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW",
+            ];
+            const angle = Number(degrees);
+            if (!Number.isFinite(angle)) return String(degrees ?? "");
+            return directions[Math.round(((angle % 360) + 360) % 360 / 22.5) % 16];
+        }
+
         function renderMarkdown(markdown) {
             const content = document.createElement("div");
             content.className = "markdown-content";
@@ -647,7 +657,7 @@
                         const headings = [
                             ["date", "Time (local)"],
                             ["wave_height", "Wave Height (m)"],
-                            ["wave_direction", "Wave Direction"],
+                            ["wave_direction", "Wave Direction (from)"],
                             ["wave_period", "Wave Period (s)"],
                             ["wave_peak_period", "Wave Peak Period (s)"],
                             ["sea_level_height_msl", "Sea Level Height (m)"],
@@ -683,7 +693,10 @@
                                     wave !== null && typeof wave === "object"
                                         ? wave[field]
                                         : null;
-                                cell.textContent = String(fieldValue ?? "");
+                                cell.textContent =
+                                    field === "wave_direction"
+                                        ? formatWaveDirection(fieldValue)
+                                        : String(fieldValue ?? "");
                                 waveRow.append(cell);
                             }
                             body.append(waveRow);
