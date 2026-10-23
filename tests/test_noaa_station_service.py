@@ -1,10 +1,10 @@
 import unittest
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from services import forecast_service
 from services.city_data_service import get_location_timezone
-import services.forecast_service as forecast_service
 from services.noaa_station_service import get_station_id
 
 
@@ -15,7 +15,7 @@ class NOAAStationServiceTests(unittest.TestCase):
         )
 
         self.assertEqual(
-            datetime(2026, 10, 14, 15, tzinfo=timezone.utc)
+            datetime(2026, 10, 14, 15, tzinfo=UTC)
             .astimezone(location_timezone)
             .strftime("%Y-%m-%d %H:%M"),
             "2026-10-14 08:00",
@@ -29,6 +29,10 @@ class NOAAStationServiceTests(unittest.TestCase):
 
         self.assertEqual(get_station_id("new smyrna beach"), "8721164")
 
+    @patch(
+        "services.forecast_service.waves.get_waves_data",
+        return_value=None,
+    )
     @patch("services.forecast_service.tides.get_tides_from_station_id_and_dates")
     @patch("services.forecast_service.noaa_stations.get_station_id")
     @patch("services.forecast_service.moon.get_moon_phase_from_city_data")
@@ -41,12 +45,13 @@ class NOAAStationServiceTests(unittest.TestCase):
         get_moon_phase,
         get_station_id,
         get_tides,
+        get_waves,
     ):
         requested_date = date(2026, 10, 14)
         get_forecast.return_value = SimpleNamespace(
             periods=[
                 SimpleNamespace(
-                    start_time=datetime(2026, 10, 14, 15, tzinfo=timezone.utc),
+                    start_time=datetime(2026, 10, 14, 15, tzinfo=UTC),
                     precipitation_probability=10,
                     temperature=20,
                     wind_speed={"maxValue": 10, "minValue": 5},
@@ -79,6 +84,11 @@ class NOAAStationServiceTests(unittest.TestCase):
         get_forecast.assert_called_once_with("New Smyrna Beach", "FL", requested_date)
         get_city_data.assert_called_once_with("New Smyrna Beach", "FL")
         get_tides.assert_called_once_with("8721164", "2026-10-14")
+        get_waves.assert_called_once_with(
+            29.0,
+            -80.9,
+            get_location_timezone(get_city_data.return_value),
+        )
         self.assertEqual(result.city, "New Smyrna Beach")
         self.assertEqual(result.start_time, "2026-10-14 11:00")
 

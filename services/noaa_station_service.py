@@ -1,6 +1,5 @@
 import requests
 
-
 STATIONS_URL = (
     "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json"
 )

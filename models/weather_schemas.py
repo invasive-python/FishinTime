@@ -1,8 +1,8 @@
 from datetime import date, datetime
+from typing import Annotated
 
-from pydantic import BaseModel
-
-from typing import Optional
+import pandas as pd
+from pydantic import BaseModel, ConfigDict, WithJsonSchema, field_serializer
 
 
 class LocationRequest(BaseModel):
@@ -33,6 +33,8 @@ class WeatherResponse(BaseModel):
 
 
 class ForecastResponse(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     city: str
     date: str
     precipitation_probability: int
@@ -46,14 +48,44 @@ class ForecastResponse(BaseModel):
     moon_closest_phase_date: str
     moon_brightness: str
     predictions: list[dict]
-    waves: Optional[list[dict]] = None
-    wave_height: Optional[list[dict]] = None
-    wave_direction: Optional[list[dict]] = None
-    wave_peak_period: Optional[list[dict]] = None
-    sea_level_height: Optional[list[dict]] = None
+    waves: Annotated[
+        pd.DataFrame | None,
+        WithJsonSchema(
+            {
+                "anyOf": [
+                    {"type": "array", "items": {"type": "object"}},
+                    {"type": "null"},
+                ]
+            }
+        ),
+    ] = None
     detailed_forecast: str
     ai_evaluation: str = ""
     evaluation_id: str | None = None
+
+    @field_serializer("waves")
+    def serialize_waves(
+        self, value: pd.DataFrame | None
+    ) -> list[dict[str, object]] | None:
+        if value is None:
+            return None
+        records = value.to_dict(orient="records")
+        return [
+            {
+                field: (
+                    None
+                    if item is None or pd.isna(item)
+                    else item.isoformat()
+                    if isinstance(item, pd.Timestamp)
+                    else item.item()
+                    if hasattr(item, "item")
+                    else item
+                )
+                for field, item in record.items()
+            }
+            for record in records
+        ]
+
 
 class EvaluationJobResponse(BaseModel):
     status: str

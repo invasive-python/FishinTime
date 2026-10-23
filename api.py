@@ -5,13 +5,16 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
 from routers.forecast_router import (
     SecretsManagerError,
     get_secret,
+)
+from routers.forecast_router import (
     router as forecast_router,
 )
 from routers.location_router import router as location_router
-
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +36,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(title="FishinTime Forecast API", lifespan=lifespan)
 app.include_router(forecast_router)
 app.include_router(location_router)
+app.mount(
+    "/res",
+    StaticFiles(directory=Path(__file__).with_name("res")),
+    name="res",
+)
 
 @app.get("/health", include_in_schema=False)
 def health():

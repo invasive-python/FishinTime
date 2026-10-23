@@ -18,6 +18,7 @@
             --accent: #087e83;
             --accent-hover: #05666b;
             --border: #c7deda;
+            --table-border: #b2cfcb;
             --soft: #f1f8f6;
             min-height: 100vh;
             margin: 0;
@@ -103,9 +104,17 @@
             background: var(--soft);
         }
         #evaluation:empty { display: none; }
-        .tide-table { border-collapse: collapse; white-space: normal; }
-        .tide-table th, .tide-table td { padding: 6px 10px; text-align: left; }
-        .tide-table th { border-bottom: 1px solid var(--border); }
+        .markdown-content a { overflow-wrap: anywhere; }
+        #forecastResult table {
+            border-collapse: collapse;
+            white-space: normal;
+        }
+        #forecastResult th, #forecastResult td {
+            padding: 6px 10px;
+            border: 1px solid var(--table-border);
+            text-align: left;
+        }
+        .progress-dots { display: inline-block; width: 1.5em; }
         .about-section { margin-top: 24px; }
         .about-section summary {
             cursor: pointer;
@@ -122,7 +131,7 @@
             height: auto;
             background: #fff;
         }
-        .markdown-content { white-space: normal; }
+        .markdown-content { white-space: normal; overflow-wrap: anywhere; }
         .markdown-content h1, .markdown-content h2, .markdown-content h3,
         .markdown-content h4, .markdown-content h5, .markdown-content h6 {
             margin: 1em 0 .5em;
@@ -242,7 +251,17 @@
         const forecastSubmit = document.getElementById("forecastSubmit");
         const forecastResult = document.getElementById("forecastResult");
         const evaluation = document.getElementById("evaluation");
+        const DEFAULT_STATE = "FL";
+        const DEFAULT_STATION = "Fort Lauderdale, Andrews Ave. Bridge";
         let activeEvaluationRequest = 0;
+        let evaluationProgressTimer = null;
+
+        function stopEvaluationProgress() {
+            if (evaluationProgressTimer !== null) {
+                clearInterval(evaluationProgressTimer);
+                evaluationProgressTimer = null;
+            }
+        }
 
         async function loadEvaluation(evaluationId, requestId) {
             while (requestId === activeEvaluationRequest) {
@@ -257,6 +276,7 @@
                 if (requestId !== activeEvaluationRequest) return;
 
                 if (result.status === "completed") {
+                    stopEvaluationProgress();
                     evaluation.replaceChildren(
                         Object.assign(document.createElement("h3"), {
                             textContent: "Overall Recommendation",
@@ -266,6 +286,7 @@
                     return;
                 }
                 if (result.status === "failed") {
+                    stopEvaluationProgress();
                     evaluation.textContent = result.error || "The AI evaluation could not be prepared.";
                     return;
                 }
@@ -273,13 +294,37 @@
         }
 
         function appendMarkdownInline(parent, text) {
-            const pattern = /(\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\*[^*\n]+\*|_[^_\n]+_)/g;
+            const pattern = /(\[[^\]]+\]\(https?:\/\/[^)\s]+\)|https?:\/\/[^\s<>()]+|\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\*[^*\n]+\*|_[^_\n]+_)/g;
             let lastIndex = 0;
 
             for (const match of text.matchAll(pattern)) {
                 const token = match[0];
                 const start = match.index;
                 parent.append(document.createTextNode(text.slice(lastIndex, start)));
+
+                const markdownLink = token.match(/^\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)$/);
+                if (markdownLink) {
+                    const link = document.createElement("a");
+                    link.href = markdownLink[2];
+                    link.textContent = markdownLink[1];
+                    link.target = "_blank";
+                    link.rel = "noopener noreferrer";
+                    parent.append(link);
+                    lastIndex = start + token.length;
+                    continue;
+                }
+
+                if (/^https?:\/\//i.test(token)) {
+                    const url = token.replace(/[.,!?;:]+$/, "");
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.textContent = url;
+                    link.target = "_blank";
+                    link.rel = "noopener noreferrer";
+                    parent.append(link, document.createTextNode(token.slice(url.length)));
+                    lastIndex = start + token.length;
+                    continue;
+                }
 
                 const isStrong = token.startsWith("**") || token.startsWith("__");
                 const isCode = token.startsWith("`");
@@ -383,7 +428,6 @@
             return content;
         }
 
-        // 1. Load States immediately when page loads
         async function loadStates() {
             try {
                 const response = await fetch(`${API_BASE}/states`);
@@ -396,23 +440,21 @@
                     const option = document.createElement("option");
                     option.value = state;
                     option.textContent = state;
-                    // if (state === "FL") {
-                    //     option.selected = true; 
-                    // }                    
                     stateSelect.appendChild(option);
                 });
+
+                if (states.includes(DEFAULT_STATE)) {
+                    stateSelect.value = DEFAULT_STATE;
+                    await loadStations(DEFAULT_STATE, DEFAULT_STATION);
+                }
             } catch (error) {
                 console.error("Error fetching states:", error);
             }
         }
 
-        // 2. Listen for State changes to populate Cities
-        stateSelect.addEventListener("change", async (event) => {
-            const selectedState = event.target.value;
-
-            // Reset City dropdown
+        async function loadStations(selectedState, defaultStation = "") {
             citySelect.innerHTML = '<option value="">-- Choose a Station --</option>';
-            
+
             if (!selectedState) {
                 citySelect.disabled = true;
                 return;
@@ -435,22 +477,26 @@
                     const option = document.createElement("option");
                     option.value = city.name;
                     option.textContent = city.name;
-                    // if (city.name === "Fort Lauderdale, Andrews Ave. Bridge") {
-                    //     option.selected = true; 
-                    // }                    
-
                     citySelect.appendChild(option);
                 });
 
                 citySelect.disabled = cities.length === 0;
+                if (cities.some(city => city.name === defaultStation)) {
+                    citySelect.value = defaultStation;
+                }
             } catch (error) {
                 console.error("Error fetching cities:", error);
                 citySelect.disabled = true;
             }
+        }
+
+        stateSelect.addEventListener("change", async (event) => {
+            await loadStations(event.target.value);
         });
 
         forecastForm.addEventListener("submit", async (event) => {
             event.preventDefault();
+            stopEvaluationProgress();
             forecastSubmit.disabled = true;
             forecastResult.textContent = "Loading forecast...";
             const requestId = ++activeEvaluationRequest;
@@ -458,9 +504,7 @@
                 Object.assign(document.createElement("h3"), {
                     textContent: "Overall Recommendation",
                 }),
-                Object.assign(document.createElement("p"), {
-                    textContent: "An AI evaluation is being prepared. This may take a little while.",
-                })
+                createEvaluationProgressMessage()
             );
 
             const params = new URLSearchParams({
@@ -474,7 +518,7 @@
             ["city", "City"],
             ["date", "Date"],
             ["precipitation_probability", "Chance of Precipitation"],
-            ["start_time", "Precipitation Starting Time"],
+            ["start_time", "Precipitation Starting Time (local)"],
             ["temp", "Temparature"],
             ["wind_speed_max", "Wind Speed (Max)"],
             ["wind_speed_min", "Wind Speed (Min)"],
@@ -486,9 +530,6 @@
             ["predictions", "Tides"],
             ["detailed_forecast", "Forecast"],
             ["waves","Waves"],
-            ["wave_height", "Wave Height"],
-            ["wave_direction","Wave Direction"],
-            ["wave_peak_period", "Wave Peak Period"]
             ]);
 
             try {
@@ -512,12 +553,91 @@
                     row.append(term)
 
                     const definition = document.createElement("td");
-                    if (key === "predictions" && Array.isArray(value)) {
+                    if (key === "waves") {
+                        let waveRows = value;
+                        if (typeof waveRows === "string") {
+                            try {
+                                waveRows = JSON.parse(waveRows);
+                            } catch (error) {
+                                console.error("Unable to parse wave data:", error);
+                                waveRows = [];
+                            }
+                        }
+                        if (
+                            !Array.isArray(waveRows) &&
+                            waveRows !== null &&
+                            typeof waveRows === "object" &&
+                            Array.isArray(waveRows.data) &&
+                            Array.isArray(waveRows.columns)
+                        ) {
+                            waveRows = waveRows.data.map(values =>
+                                Object.fromEntries(
+                                    waveRows.columns.map((column, index) => [
+                                        column,
+                                        values[index],
+                                    ])
+                                )
+                            );
+                        }
+                        if (!Array.isArray(waveRows) || waveRows.length === 0) {
+                            definition.textContent = "No wave data available.";
+                            row.append(definition);
+                            details.append(row);
+                            continue;
+                        }
+
+                        const headings = [
+                            ["date", "Time (local)"],
+                            ["wave_height", "Wave Height (m)"],
+                            ["wave_direction", "Wave Direction"],
+                            ["wave_period", "Wave Period (s)"],
+                            ["wave_peak_period", "Wave Peak Period (s)"],
+                            ["sea_level_height_msl", "Sea Level Height (m)"],
+                        ];
+                        const fields = [
+                            ...new Set(
+                                waveRows.flatMap(wave =>
+                                    wave !== null && typeof wave === "object"
+                                        ? Object.keys(wave)
+                                        : []
+                                )
+                            ),
+                        ];
+                        const headingLabels = new Map(headings);
+                        const waves = document.createElement("table");
+                        waves.className = "tide-table";
+                        const header = document.createElement("thead");
+                        const headerRow = document.createElement("tr");
+                        for (const field of fields) {
+                            const cell = document.createElement("th");
+                            cell.scope = "col";
+                            cell.textContent = headingLabels.get(field) || field;
+                            headerRow.append(cell);
+                        }
+                        header.append(headerRow);
+
+                        const body = document.createElement("tbody");
+                        for (const wave of waveRows) {
+                            const waveRow = document.createElement("tr");
+                            for (const field of fields) {
+                                const cell = document.createElement("td");
+                                const fieldValue =
+                                    wave !== null && typeof wave === "object"
+                                        ? wave[field]
+                                        : null;
+                                cell.textContent = String(fieldValue ?? "");
+                                waveRow.append(cell);
+                            }
+                            body.append(waveRow);
+                        }
+                        waves.append(header, body);
+                        definition.append(waves);
+                    } else if (key === "predictions" && Array.isArray(value)) {
                         const tides = document.createElement("table");
                         tides.className = "tide-table";
                         const headings = [
                             ["type", "Type"],
-                            ["t", "Time"],
+                            ["t", "Time (local)"],
                             ["v", "Height (ft)"],
                         ];
                         const header = document.createElement("thead");
@@ -561,15 +681,18 @@
                 if (result.evaluation_id) {
                     loadEvaluation(result.evaluation_id, requestId).catch(error => {
                         if (requestId === activeEvaluationRequest) {
+                            stopEvaluationProgress();
                             console.error("Error fetching AI evaluation:", error);
                             evaluation.textContent = "Unable to load the AI evaluation.";
                         }
                     });
                 } else {
+                    stopEvaluationProgress();
                     evaluation.textContent = "AI evaluation was not started.";
                 }
 
             } catch (error) {
+                stopEvaluationProgress();
                 console.error("Error fetching forecast:", error);
                 forecastResult.textContent = `Unable to load forecast: ${error.message}`;
                 evaluation.textContent = "The AI evaluation could not be started.";
@@ -577,6 +700,23 @@
                 forecastSubmit.disabled = false;
             }
         });
+
+        function createEvaluationProgressMessage() {
+            const message = document.createElement("p");
+            message.append(document.createTextNode(
+                "An AI evaluation is being prepared. This may take a little while"
+            ));
+            const dots = document.createElement("span");
+            dots.className = "progress-dots";
+            dots.setAttribute("aria-hidden", "true");
+            message.append(dots);
+            let dotCount = 0;
+            evaluationProgressTimer = setInterval(() => {
+                dotCount = (dotCount + 1) % 4;
+                dots.textContent = ".".repeat(dotCount);
+            }, 600);
+            return message;
+        }
 
         // Initialize application
         loadStates();

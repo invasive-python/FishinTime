@@ -1,10 +1,11 @@
 from datetime import date, datetime
-from fastapi import APIRouter, HTTPException
-from models.weather_schemas import ForecastPeriod, WeatherResponse
-from services.city_data_service import get_long_lat_from_city
 from typing import Any, NotRequired, Required, TypedDict
 
 import requests
+from fastapi import HTTPException
+
+from models.weather_schemas import ForecastPeriod, WeatherResponse
+from services.city_data_service import get_long_lat_from_city
 
 
 class _NoaaProbability(TypedDict, total=False):

@@ -17,6 +17,18 @@ class ForecastRouteTests(unittest.TestCase):
         "api.get_secret",
         side_effect=["test-api-key", "test-agent-id"],
     )
+    def test_static_diagram_is_served(self, get_secret):
+        with TestClient(app) as client:
+            response = client.get("/res/mermaid-diagram.png")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["content-type"], "image/png")
+        self.assertTrue(response.content)
+
+    @patch(
+        "api.get_secret",
+        side_effect=["test-api-key", "test-agent-id"],
+    )
     def test_startup_reads_secret_once_and_stores_it_on_app(self, get_secret):
         with TestClient(app):
             self.assertEqual(app.state.openai_api_key, "test-api-key")

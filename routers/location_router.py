@@ -1,14 +1,13 @@
+
 import requests
 from fastapi import APIRouter, HTTPException, Query
-from typing import Dict, List
 
-from models.weather_schemas import LocationResponse
 from services.noaa_station_service import get_stations
 
 router = APIRouter()
 
 
-def _get_stations() -> List[Dict[str, object]]:
+def _get_stations() -> list[dict[str, object]]:
     try:
         return get_stations()
     except (requests.RequestException, ValueError) as exc:
@@ -34,8 +33,8 @@ def _get_stations() -> List[Dict[str, object]]:
 #     return LocationResponse(state=state, stations=filtered_stations)
 
 
-@router.get("/api/states", response_model=List[str])
-def get_states() -> List[str]:
+@router.get("/api/states", response_model=list[str])
+def get_states() -> list[str]:
     """Return the state codes that have NOAA tide-prediction stations."""
     return sorted(
         {
@@ -46,10 +45,10 @@ def get_states() -> List[str]:
     )
 
 
-@router.get("/api/cities", response_model=List[Dict[str, str]])
+@router.get("/api/cities", response_model=list[dict[str, str]])
 def get_cities_from_location(
     state: str = Query(..., description="The two-letter state code, e.g., FL"),
-) -> List[Dict[str, str]]:
+) -> list[dict[str, str]]:
     """Returns only the stations/cities that belong to the selected state."""
     return [
         {"id": station["id"], "name": station["name"]}

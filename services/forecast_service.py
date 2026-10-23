@@ -4,6 +4,7 @@ import services.city_data_service as city_service
 import services.moon_phase_service as moon
 import services.noaa_station_service as noaa_stations
 import services.tides_service as tides
+import services.waves_service as waves
 import services.weather_service as weather
 from models.weather_schemas import ForecastResponse
 
@@ -32,13 +33,21 @@ def serve_forecast(city, state, date):
         if not city_data:
             return None
 
+        location_timezone = city_service.get_location_timezone(city_data)
         phase_data = moon.get_moon_phase_from_city_data(city_data, parsed_date)
+
         station_id = noaa_stations.get_station_id(city)
         if station_id is None:
             return None
 
         tide_data = tides.get_tides_from_station_id_and_dates(
             station_id, parsed_date.isoformat()
+        )
+
+        waves_data = waves.get_waves_data(
+            city_data["latitude"],
+            city_data["longitude"],
+            location_timezone,
         )
 
         if not forecast or not getattr(forecast, "periods", None):
@@ -50,7 +59,7 @@ def serve_forecast(city, state, date):
         detailed_forecast = forecast_period.detailed_forecast
         precipitation = forecast_period.precipitation_probability or 0
         start_time = forecast_period.start_time.astimezone(
-            city_service.get_location_timezone(city_data)
+            location_timezone
         ).strftime("%Y-%m-%d %H:%M")
         temperature = forecast_period.temperature
         fahrenheit = ((temperature * 1.8) + 32) if temperature is not None else 0
@@ -85,7 +94,7 @@ def serve_forecast(city, state, date):
                 or ""
             ),
             moon_closest_phase=str(closest_phase.get("phase") or ""),
-            moon_closest_phase_date = closest_date,
+            moon_closest_phase_date=closest_date,
             moon_brightness=str(
                 _nested_lookup(phase_data, "data", "fracillum")
                 or _nested_lookup(phase_data, "fracillum")
@@ -93,8 +102,10 @@ def serve_forecast(city, state, date):
             ),
             predictions=tide_data,
             detailed_forecast=detailed_forecast,
-            ai_evaluation=""
+            ai_evaluation="",
+            waves=waves_data,
         )
+
     except Exception as e:
         print(e)
         raise

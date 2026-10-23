@@ -1,18 +1,17 @@
+import json
 import logging
 import os
 import uuid
 from datetime import datetime
 
 import boto3
-import json
 import requests
 from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from openai import OpenAI
 
-import services.forecast_service as forecast_service
-
 from models.weather_schemas import EvaluationJobResponse, ForecastResponse
+from services import forecast_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

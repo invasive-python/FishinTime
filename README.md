@@ -1,5 +1,9 @@
 # fishin_time
 
+Static files used by the page belong in `res/`. The Docker image copies this
+directory and FastAPI serves it under `/res`; for example,
+`res/mermaid-diagram.png` is available at `/res/mermaid-diagram.png`.
+
 ## OpenAI agent and AWS Secrets Manager setup
 
 Install the project dependencies with `pip install -r requirements.txt`. Store

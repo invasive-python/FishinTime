@@ -1,5 +1,5 @@
 {
-    "taskDefinitionArn": "arn:aws:ecs:us-east-2:462025067652:task-definition/fishintime-backend:11",
+    "taskDefinitionArn": "arn:aws:ecs:us-east-2:462025067652:task-definition/fishintime-backend:13",
     "containerDefinitions": [
         {
             "name": "fishintime-backend",

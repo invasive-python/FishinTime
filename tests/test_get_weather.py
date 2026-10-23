@@ -90,9 +90,8 @@ class WeatherLookupTests(unittest.TestCase):
         with patch(
             "services.city_data_service.requests.get",
             side_effect=requests.Timeout("provider timed out"),
-        ):
-            with self.assertRaises(requests.Timeout):
-                get_long_lat_from_city("Miami", "FL")
+        ), self.assertRaises(requests.Timeout):
+            get_long_lat_from_city("Miami", "FL")
 
 
 if __name__ == "__main__":

@@ -3,7 +3,6 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import requests
 
-
 US_STATE_NAME_TO_CODE: dict[str, str] = {
     "Alabama": "AL",
     "Alaska": "AK",
