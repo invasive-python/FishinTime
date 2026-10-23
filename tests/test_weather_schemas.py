@@ -3,7 +3,7 @@ import unittest
 
 import pandas as pd
 
-from models.weather_schemas import ForecastResponse
+from models.weather_schemas import ForecastResponse, PressureTrend
 
 
 class ForecastResponseTests(unittest.TestCase):
@@ -32,12 +32,23 @@ class ForecastResponseTests(unittest.TestCase):
             predictions=[],
             waves=waves,
             detailed_forecast="Clear",
+            pressure=PressureTrend(
+                current_pressure_hpa=1012.0,
+                pressure_3_hours_ago_hpa=1010.0,
+                change_3h_hpa=2.0,
+                trend="Rising rapidly",
+                outlook="Pressure outlook.",
+            ),
         )
 
         self.assertIs(response.waves, waves)
         self.assertEqual(
             json.loads(response.model_dump_json())["waves"],
             [{"date": "2026-10-22T20:00:00-04:00", "wave_height": 1.2}],
+        )
+        self.assertEqual(
+            json.loads(response.model_dump_json())["pressure"]["change_3h_hpa"],
+            2.0,
         )
         self.assertIn("waves", ForecastResponse.model_json_schema()["properties"])
 

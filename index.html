@@ -530,6 +530,7 @@
             ["predictions", "Tides"],
             ["detailed_forecast", "Forecast"],
             ["waves","Waves"],
+            ["pressure", "Barometric Pressure"],
             ]);
 
             try {
@@ -553,7 +554,64 @@
                     row.append(term)
 
                     const definition = document.createElement("td");
-                    if (key === "waves") {
+                    if (key === "pressure") {
+                        const pressureRows = [
+                            ["current_pressure_hpa", "Current Pressure (hPa)"],
+                            ["pressure_3_hours_ago_hpa", "Pressure 3 Hours Ago (hPa)"],
+                            ["change_3h_hpa", "Change Over 3 Hours (hPa)"],
+                            ["trend", "Trend"],
+                            ["outlook", "Fishing Outlook"],
+                        ];
+                        const pressureTable = document.createElement("table");
+                        pressureTable.className = "tide-table";
+                        const body = document.createElement("tbody");
+                        const hasPressureReadings = pressureRows.some(
+                            ([field]) =>
+                                value?.[field] !== null &&
+                                value?.[field] !== undefined
+                        );
+                        if (!hasPressureReadings && value?.error) {
+                            const pressureRow = document.createElement("tr");
+                            const labelCell = document.createElement("th");
+                            labelCell.scope = "row";
+                            labelCell.textContent = "Unavailable";
+                            const valueCell = document.createElement("td");
+                            valueCell.textContent = value.error;
+                            pressureRow.append(labelCell, valueCell);
+                            body.append(pressureRow);
+                        } else {
+                            for (const [field, label] of pressureRows) {
+                                const pressureRow = document.createElement("tr");
+                                const labelCell = document.createElement("th");
+                                labelCell.scope = "row";
+                                labelCell.textContent = label;
+                                const valueCell = document.createElement("td");
+                                const fieldValue = value?.[field];
+                                valueCell.textContent =
+                                    fieldValue === null || fieldValue === undefined
+                                        ? "Unavailable"
+                                        : field === "current_pressure_hpa" ||
+                                            field === "pressure_3_hours_ago_hpa" ||
+                                            field === "change_3h_hpa"
+                                          ? Number(fieldValue).toFixed(1)
+                                          : String(fieldValue);
+                                pressureRow.append(labelCell, valueCell);
+                                body.append(pressureRow);
+                            }
+                            if (value?.error) {
+                                const pressureRow = document.createElement("tr");
+                                const labelCell = document.createElement("th");
+                                labelCell.scope = "row";
+                                labelCell.textContent = "Note";
+                                const valueCell = document.createElement("td");
+                                valueCell.textContent = value.error;
+                                pressureRow.append(labelCell, valueCell);
+                                body.append(pressureRow);
+                            }
+                        }
+                        pressureTable.append(body);
+                        definition.append(pressureTable);
+                    } else if (key === "waves") {
                         let waveRows = value;
                         if (typeof waveRows === "string") {
                             try {

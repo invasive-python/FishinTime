@@ -6,6 +6,8 @@ import services.noaa_station_service as noaa_stations
 import services.tides_service as tides
 import services.waves_service as waves
 import services.weather_service as weather
+import services.pressure_forecaster as pressure
+
 from models.weather_schemas import ForecastResponse
 
 
@@ -33,6 +35,9 @@ def serve_forecast(city, state, date):
         if not city_data:
             return None
 
+        lat = city_data["latitude"]
+        long = city_data["longitude"]
+
         location_timezone = city_service.get_location_timezone(city_data)
         phase_data = moon.get_moon_phase_from_city_data(city_data, parsed_date)
 
@@ -44,11 +49,10 @@ def serve_forecast(city, state, date):
             station_id, parsed_date.isoformat()
         )
 
-        waves_data = waves.get_waves_data(
-            city_data["latitude"],
-            city_data["longitude"],
-            location_timezone,
+        waves_data = waves.get_waves_data(lat, long, location_timezone,
         )
+
+        pressure_data = pressure.get_fishing_pressure_trend(lat, long)
 
         if not forecast or not getattr(forecast, "periods", None):
             return None
@@ -104,6 +108,7 @@ def serve_forecast(city, state, date):
             detailed_forecast=detailed_forecast,
             ai_evaluation="",
             waves=waves_data,
+            pressure = pressure_data,
         )
 
     except Exception as e:

@@ -3,6 +3,7 @@ from datetime import UTC, date, datetime
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from models.weather_schemas import PressureTrend
 from services import forecast_service
 from services.city_data_service import get_location_timezone
 from services.noaa_station_service import get_station_id
@@ -33,6 +34,16 @@ class NOAAStationServiceTests(unittest.TestCase):
         "services.forecast_service.waves.get_waves_data",
         return_value=None,
     )
+    @patch(
+        "services.forecast_service.pressure.get_fishing_pressure_trend",
+        return_value=PressureTrend(
+            current_pressure_hpa=1012.0,
+            pressure_3_hours_ago_hpa=1010.0,
+            change_3h_hpa=2.0,
+            trend="Rising rapidly",
+            outlook="Pressure outlook.",
+        ),
+    )
     @patch("services.forecast_service.tides.get_tides_from_station_id_and_dates")
     @patch("services.forecast_service.noaa_stations.get_station_id")
     @patch("services.forecast_service.moon.get_moon_phase_from_city_data")
@@ -45,6 +56,7 @@ class NOAAStationServiceTests(unittest.TestCase):
         get_moon_phase,
         get_station_id,
         get_tides,
+        get_pressure,
         get_waves,
     ):
         requested_date = date(2026, 10, 14)
@@ -89,8 +101,10 @@ class NOAAStationServiceTests(unittest.TestCase):
             -80.9,
             get_location_timezone(get_city_data.return_value),
         )
+        get_pressure.assert_called_once_with(29.0, -80.9)
         self.assertEqual(result.city, "New Smyrna Beach")
         self.assertEqual(result.start_time, "2026-10-14 11:00")
+        self.assertEqual(result.pressure.change_3h_hpa, 2.0)
 
 
 if __name__ == "__main__":
