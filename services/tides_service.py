@@ -33,8 +33,8 @@ def get_tides_from_station_id_and_dates(
     station_id: str, parsed_date: str
 ) -> list[dict]:
     requested_date = date.fromisoformat(parsed_date)
-    begin_date = requested_date.strftime("%Y%m%d")
-    end_date = (requested_date + timedelta(days=1)).strftime("%Y%m%d")
+    begin_date = (requested_date - timedelta(days=1)).strftime("%Y%m%d")
+    end_date = (requested_date + timedelta(days=2)).strftime("%Y%m%d")
 
     tide_data = get_tide_data(station_id, begin_date, end_date)
     return tide_data["predictions"]

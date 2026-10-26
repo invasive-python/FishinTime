@@ -33,9 +33,9 @@ class ForecastResponseTests(unittest.TestCase):
             waves=waves,
             detailed_forecast="Clear",
             pressure=PressureTrend(
-                current_pressure_hpa=1012.0,
-                pressure_3_hours_ago_hpa=1010.0,
-                change_3h_hpa=2.0,
+                current_pressure_inhg=29.88,
+                pressure_3_hours_ago_inhg=29.82,
+                change_3h_inhg=0.06,
                 trend="Rising rapidly",
                 outlook="Pressure outlook.",
             ),
@@ -47,8 +47,8 @@ class ForecastResponseTests(unittest.TestCase):
             [{"date": "2026-10-22T20:00:00-04:00", "wave_height": 1.2}],
         )
         self.assertEqual(
-            json.loads(response.model_dump_json())["pressure"]["change_3h_hpa"],
-            2.0,
+            json.loads(response.model_dump_json())["pressure"]["change_3h_inhg"],
+            0.06,
         )
         self.assertIn("waves", ForecastResponse.model_json_schema()["properties"])
 

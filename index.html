@@ -114,6 +114,143 @@
             border: 1px solid var(--table-border);
             text-align: left;
         }
+        .tide-chart {
+            min-width: 0;
+            color: var(--ink);
+            white-space: normal;
+        }
+        .tide-chart-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 10px;
+            color: var(--muted);
+            font-size: .85rem;
+        }
+        .tide-chart-legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .tide-chart-note {
+            margin: 0 0 10px;
+            color: var(--muted);
+            font-size: .8rem;
+        }
+        .tide-chart-swatch {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+        .tide-chart-swatch.high { background: #c87532; }
+        .tide-chart-swatch.low { background: var(--accent); }
+        .tide-chart svg {
+            display: block;
+            width: 100%;
+            height: auto;
+            overflow: visible;
+        }
+        .tide-chart-grid { stroke: var(--border); stroke-width: 1; }
+        .tide-chart-axis-label {
+            fill: var(--muted);
+            font: 12px "Segoe UI", sans-serif;
+        }
+        .tide-chart-curve {
+            fill: none;
+            stroke: var(--accent);
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-width: 3;
+        }
+        .tide-chart-point {
+            stroke: var(--surface);
+            stroke-width: 3;
+        }
+        .wave-chart {
+            min-width: 0;
+            color: var(--ink);
+            white-space: normal;
+        }
+        .wave-chart svg {
+            display: block;
+            width: 100%;
+            height: auto;
+            overflow: visible;
+        }
+        .wave-chart-curve {
+            fill: none;
+            stroke: var(--accent);
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-width: 3;
+        }
+        .wave-chart-point {
+            fill: #c87532;
+            stroke: var(--surface);
+            stroke-width: 3;
+        }
+        .pressure-indicator {
+            display: grid;
+            justify-items: start;
+            gap: 7px;
+            padding: 14px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--ink);
+            background: var(--soft);
+            white-space: normal;
+        }
+        .pressure-current {
+            color: var(--ink);
+            font-size: 1.45rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+        }
+        .pressure-trend {
+            font-weight: 800;
+        }
+        .pressure-trend.rising { color: #a75c24; }
+        .pressure-trend.falling { color: var(--accent); }
+        .pressure-trend.stable, .pressure-trend.unavailable { color: var(--muted); }
+        .pressure-change, .pressure-outlook, .pressure-error {
+            margin: 0;
+            color: var(--muted);
+        }
+        .moon-display {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            min-height: 112px;
+            white-space: normal;
+        }
+        .moon-display svg {
+            display: block;
+            flex: 0 0 96px;
+            width: 96px;
+            height: 96px;
+        }
+        .moon-disc {
+            fill: var(--border);
+            stroke: var(--accent);
+            stroke-width: 2;
+        }
+        .moon-disc.moon-new { fill: var(--accent); }
+        .moon-lit {
+            fill: #f4d99e;
+        }
+        .moon-dim-overlay {
+            fill: var(--page);
+        }
+        .moon-display-copy {
+            display: grid;
+            gap: 5px;
+        }
+        .moon-display-copy strong { color: var(--ink); }
+        .moon-display-copy span {
+            color: var(--muted);
+            font-size: .9rem;
+        }
         .progress-dots { display: inline-block; width: 1.5em; }
         .about-section { margin-top: 24px; }
         .about-section summary {
@@ -350,6 +487,637 @@
             return directions[Math.round(((angle % 360) + 360) % 360 / 22.5) % 16];
         }
 
+        function renderPressureIndicator(pressure) {
+            const indicator = document.createElement("div");
+            indicator.className = "pressure-indicator";
+            indicator.setAttribute("role", "group");
+            indicator.setAttribute("aria-label", "Current barometric pressure");
+
+            const rawCurrentPressure = pressure?.current_pressure_inhg;
+            const currentPressure =
+                rawCurrentPressure === null || rawCurrentPressure === undefined
+                    ? Number.NaN
+                    : Number(rawCurrentPressure);
+            if (!Number.isFinite(currentPressure)) {
+                const unavailable = document.createElement("strong");
+                unavailable.textContent = "Pressure unavailable";
+                indicator.append(unavailable);
+                if (pressure?.error) {
+                    const error = document.createElement("p");
+                    error.className = "pressure-error";
+                    error.textContent = pressure.error;
+                    indicator.append(error);
+                }
+                return indicator;
+            }
+
+            const current = document.createElement("strong");
+            current.className = "pressure-current";
+            current.textContent = `${currentPressure.toFixed(2)} inHg`;
+            indicator.append(current);
+
+            const rawChange = pressure?.change_3h_inhg;
+            const change =
+                rawChange === null || rawChange === undefined
+                    ? Number.NaN
+                    : Number(rawChange);
+            const suppliedTrend = String(pressure?.trend ?? "");
+            const normalizedTrend = suppliedTrend.toLowerCase();
+            const direction =
+                Number.isFinite(change) && change > 0.005906
+                    ? "rising"
+                    : Number.isFinite(change) && change < -0.005906
+                      ? "falling"
+                      : Number.isFinite(change) || normalizedTrend.includes("stable")
+                        ? "stable"
+                        : normalizedTrend.includes("rising")
+                          ? "rising"
+                          : normalizedTrend.includes("falling")
+                            ? "falling"
+                            : "unavailable";
+            const arrow =
+                direction === "rising"
+                    ? "↑ "
+                    : direction === "falling"
+                      ? "↓ "
+                      : direction === "stable"
+                        ? "→ "
+                        : "";
+            const trend = document.createElement("span");
+            trend.className = `pressure-trend ${direction}`;
+            trend.textContent =
+                `${arrow}${suppliedTrend || direction[0].toUpperCase() + direction.slice(1)}`;
+            indicator.append(trend);
+
+            if (Number.isFinite(change)) {
+                const changeLabel = document.createElement("p");
+                changeLabel.className = "pressure-change";
+                const sign = change > 0 ? "+" : "";
+                changeLabel.textContent =
+                    `${sign}${change.toFixed(3)} inHg over the last 3 hours`;
+                indicator.append(changeLabel);
+            }
+
+            if (pressure?.outlook) {
+                const outlook = document.createElement("p");
+                outlook.className = "pressure-outlook";
+                outlook.textContent = pressure.outlook;
+                indicator.append(outlook);
+            }
+
+            return indicator;
+        }
+
+        function renderWaveChart(waveRows, selectedDate) {
+            const chart = document.createElement("div");
+            chart.className = "wave-chart";
+            const points = Array.isArray(waveRows)
+                ? waveRows
+                      .map(row => {
+                          const localDateTime = String(row?.date ?? "").match(
+                              /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/
+                          );
+                          const timestamp = localDateTime
+                              ? Date.UTC(
+                                    Number(localDateTime[1]),
+                                    Number(localDateTime[2]) - 1,
+                                    Number(localDateTime[3]),
+                                    Number(localDateTime[4]),
+                                    Number(localDateTime[5])
+                                )
+                              : Number.NaN;
+                          const height = Number(row?.wave_height);
+                          if (
+                              !Number.isFinite(timestamp) ||
+                              row?.wave_height === null ||
+                              row?.wave_height === undefined ||
+                              !Number.isFinite(height)
+                          ) {
+                              return null;
+                          }
+                          return {
+                              timestamp,
+                              localTime: `${localDateTime[4]}:${localDateTime[5]}`,
+                              height,
+                              direction: row.wave_direction,
+                              period: row.wave_period,
+                          };
+                      })
+                      .filter(
+                          point =>
+                              point !== null &&
+                              point.timestamp >= Date.parse(`${selectedDate}T00:00:00Z`) &&
+                              point.timestamp <=
+                                  Date.parse(`${selectedDate}T00:00:00Z`) +
+                                      24 * 60 * 60 * 1000
+                      )
+                      .sort((left, right) => left.timestamp - right.timestamp)
+                : [];
+
+            if (points.length === 0) {
+                chart.textContent = "No wave data available.";
+                return chart;
+            }
+
+            const width = 720;
+            const height = 300;
+            const margin = { top: 18, right: 18, bottom: 42, left: 54 };
+            const plotWidth = width - margin.left - margin.right;
+            const plotHeight = height - margin.top - margin.bottom;
+            const startTime = Date.parse(`${selectedDate}T00:00:00Z`);
+            const endTime = startTime + 24 * 60 * 60 * 1000;
+            const minHeight = Math.min(...points.map(point => point.height));
+            const maxHeight = Math.max(...points.map(point => point.height));
+            const padding = Math.max((maxHeight - minHeight) * 0.18, 0.2);
+            const yMin = Math.max(0, minHeight - padding);
+            const yMax = maxHeight + padding;
+            const x = timestamp =>
+                margin.left +
+                ((timestamp - startTime) / (endTime - startTime)) * plotWidth;
+            const y = waveHeight =>
+                margin.top + ((yMax - waveHeight) / (yMax - yMin)) * plotHeight;
+            const svgElement = (name, attributes = {}) => {
+                const element = document.createElementNS(
+                    "http://www.w3.org/2000/svg",
+                    name
+                );
+                for (const [attribute, value] of Object.entries(attributes)) {
+                    element.setAttribute(attribute, value);
+                }
+                return element;
+            };
+            const svg = svgElement("svg", {
+                viewBox: `0 0 ${width} ${height}`,
+                role: "img",
+                "aria-label": `Hourly forecast wave height in feet for ${selectedDate}`,
+            });
+            const title = svgElement("title");
+            title.textContent = "Hourly forecast wave height";
+            svg.append(title);
+
+            for (let tick = 0; tick <= 4; tick += 1) {
+                const value = yMin + ((yMax - yMin) * tick) / 4;
+                const tickY = y(value);
+                svg.append(
+                    svgElement("line", {
+                        x1: margin.left,
+                        x2: width - margin.right,
+                        y1: tickY,
+                        y2: tickY,
+                        class: "tide-chart-grid",
+                    })
+                );
+                const label = svgElement("text", {
+                    x: margin.left - 9,
+                    y: tickY + 4,
+                    "text-anchor": "end",
+                    class: "tide-chart-axis-label",
+                });
+                label.textContent = value.toFixed(1);
+                svg.append(label);
+            }
+
+            for (let hour = 0; hour <= 24; hour += 4) {
+                const tickTime = startTime + hour * 60 * 60 * 1000;
+                const tickX = x(tickTime);
+                svg.append(
+                    svgElement("line", {
+                        x1: tickX,
+                        x2: tickX,
+                        y1: margin.top,
+                        y2: height - margin.bottom,
+                        class: "tide-chart-grid",
+                    })
+                );
+                const label = svgElement("text", {
+                    x: tickX,
+                    y: height - margin.bottom + 19,
+                    "text-anchor": hour === 0 ? "start" : hour === 24 ? "end" : "middle",
+                    class: "tide-chart-axis-label",
+                });
+                label.textContent = `${String(hour).padStart(2, "0")}:00`;
+                svg.append(label);
+            }
+
+            const axisLabel = svgElement("text", {
+                x: 15,
+                y: margin.top + plotHeight / 2,
+                "text-anchor": "middle",
+                transform: `rotate(-90 15 ${margin.top + plotHeight / 2})`,
+                class: "tide-chart-axis-label",
+            });
+            axisLabel.textContent = "Wave height (ft)";
+            svg.append(axisLabel);
+
+            if (points.length > 1) {
+                svg.append(
+                    svgElement("path", {
+                        d: points
+                            .map(
+                                (point, index) =>
+                                    `${index === 0 ? "M" : "L"}${x(point.timestamp)},${y(point.height)}`
+                            )
+                            .join(" "),
+                        class: "wave-chart-curve",
+                    })
+                );
+            }
+
+            for (const point of points) {
+                const marker = svgElement("circle", {
+                    cx: x(point.timestamp),
+                    cy: y(point.height),
+                    r: 4.5,
+                    class: "wave-chart-point",
+                });
+                const description = svgElement("title");
+                const details = [
+                    `${point.localTime}: ${point.height.toFixed(2)} ft`,
+                ];
+                if (point.direction !== null && point.direction !== undefined) {
+                    details.push(`direction ${formatWaveDirection(point.direction)}`);
+                }
+                if (point.period !== null && point.period !== undefined) {
+                    details.push(`period ${point.period} s`);
+                }
+                description.textContent = details.join(", ");
+                marker.append(description);
+                svg.append(marker);
+            }
+
+            chart.append(svg);
+            return chart;
+        }
+
+        function renderMoonPhase(phase, brightness) {
+            const phaseName = String(phase ?? "").trim();
+            const brightnessText = String(brightness ?? "").trim();
+            const percentMatch = brightnessText.match(/^(\d+(?:\.\d+)?)\s*%$/);
+            const numericBrightness = Number.parseFloat(brightnessText);
+            const illumination = percentMatch
+                ? Number(percentMatch[1]) / 100
+                : Number.isFinite(numericBrightness)
+                  ? numericBrightness <= 1
+                      ? numericBrightness
+                      : numericBrightness / 100
+                  : null;
+            const clampedIllumination =
+                illumination === null
+                    ? null
+                    : Math.max(0, Math.min(1, illumination));
+            const normalizedPhase = phaseName.toLowerCase();
+            const isWaxing =
+                normalizedPhase.includes("waxing") ||
+                normalizedPhase.includes("first quarter");
+            const isWaning =
+                normalizedPhase.includes("waning") ||
+                normalizedPhase.includes("last quarter") ||
+                normalizedPhase.includes("third quarter");
+            const isFull = normalizedPhase.includes("full");
+            const isNew = normalizedPhase.includes("new");
+            const isQuarter =
+                normalizedPhase.includes("quarter") ||
+                normalizedPhase.includes("first quarter");
+            const estimatedIllumination = isFull
+                ? 1
+                : isNew
+                  ? 0
+                  : isQuarter
+                    ? 0.5
+                    : null;
+            const litFraction = clampedIllumination ?? estimatedIllumination;
+            const size = 100;
+            const center = size / 2;
+            const radius = 43;
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            const svgElement = (name, attributes = {}) => {
+                const element = document.createElementNS(
+                    "http://www.w3.org/2000/svg",
+                    name
+                );
+                for (const [attribute, value] of Object.entries(attributes)) {
+                    element.setAttribute(attribute, value);
+                }
+                return element;
+            };
+
+            svg.setAttribute("viewBox", `0 0 ${size} ${size}`);
+            svg.setAttribute("role", "img");
+            svg.setAttribute(
+                "aria-label",
+                brightnessText
+                    ? `${phaseName}, ${brightnessText} illuminated`
+                    : `${phaseName}, illumination unavailable`
+            );
+            const title = svgElement("title");
+            title.textContent = brightnessText
+                ? `${phaseName} — ${brightnessText} illuminated`
+                : `${phaseName} — illumination unavailable`;
+            svg.append(title);
+
+            svg.append(
+                svgElement("circle", {
+                    cx: center,
+                    cy: center,
+                    r: radius,
+                    class: `moon-disc${isNew ? " moon-new" : ""}`,
+                })
+            );
+
+            if (litFraction !== null && litFraction > 0) {
+                let path;
+                if (isFull || litFraction >= 0.999) {
+                    svg.append(
+                        svgElement("circle", {
+                            cx: center,
+                            cy: center,
+                            r: radius,
+                            class: "moon-lit",
+                        })
+                    );
+                    path = "";
+                } else if (litFraction <= 0.001 || isNew) {
+                    path = "";
+                } else {
+                    const terminatorRadius = Math.abs(1 - 2 * litFraction) * radius;
+                    const outerSweep = isWaning ? 0 : 1;
+                    const terminatorSweep =
+                        litFraction < 0.5
+                            ? isWaxing
+                                ? 0
+                                : 1
+                            : isWaxing
+                              ? 1
+                              : 0;
+                    path =
+                        `M ${center} ${center - radius} ` +
+                        `A ${radius} ${radius} 0 0 ${outerSweep} ` +
+                        `${center} ${center + radius} ` +
+                        `A ${terminatorRadius} ${radius} 0 0 ${terminatorSweep} ` +
+                        `${center} ${center - radius} Z`;
+                }
+                if (path) {
+                    svg.append(svgElement("path", { d: path, class: "moon-lit" }));
+                }
+            }
+
+            if (clampedIllumination !== null) {
+                svg.append(
+                    svgElement("circle", {
+                        cx: center,
+                        cy: center,
+                        r: radius,
+                        class: "moon-dim-overlay",
+                        opacity: 1 - clampedIllumination,
+                    })
+                );
+            }
+
+            const display = document.createElement("div");
+            display.className = "moon-display";
+            const copy = document.createElement("div");
+            copy.className = "moon-display-copy";
+            const phaseLabel = document.createElement("strong");
+            phaseLabel.textContent = phaseName || "Moon phase unavailable";
+            copy.append(phaseLabel);
+            const brightnessLabel = document.createElement("span");
+            brightnessLabel.textContent = brightnessText
+                ? `${brightnessText} illuminated`
+                : "Illumination unavailable";
+            copy.append(brightnessLabel);
+            display.append(svg, copy);
+            return display;
+        }
+
+        function renderTideChart(predictions, selectedDate) {
+            const chart = document.createElement("div");
+            chart.className = "tide-chart";
+            const points = predictions
+                .map(prediction => {
+                    const match = String(prediction?.t ?? "").match(
+                        /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/
+                    );
+                    const height = Number(prediction?.v);
+                    if (
+                        !match ||
+                        !Number.isFinite(height) ||
+                        !["H", "L"].includes(prediction?.type)
+                    ) {
+                        return null;
+                    }
+                    const [, year, month, day, hour, minute] = match;
+                    return {
+                        time: Date.UTC(
+                            Number(year),
+                            Number(month) - 1,
+                            Number(day),
+                            Number(hour),
+                            Number(minute)
+                        ),
+                        label: `${month}/${day} ${hour}:${minute}`,
+                        height,
+                        type: prediction.type === "H" ? "high" : "low",
+                    };
+                })
+                .filter(point => point !== null)
+                .sort((left, right) => left.time - right.time);
+
+            if (points.length === 0) {
+                chart.textContent = "No tide predictions available.";
+                return chart;
+            }
+
+            const legend = document.createElement("div");
+            legend.className = "tide-chart-legend";
+            for (const [type, label] of [["high", "High tide"], ["low", "Low tide"]]) {
+                const item = document.createElement("span");
+                const swatch = document.createElement("i");
+                swatch.className = `tide-chart-swatch ${type}`;
+                swatch.setAttribute("aria-hidden", "true");
+                item.append(swatch, document.createTextNode(label));
+                legend.append(item);
+            }
+            chart.append(legend);
+            const note = document.createElement("p");
+            note.className = "tide-chart-note";
+            note.textContent =
+                "Curve interpolates between NOAA high and low tide predictions.";
+            chart.append(note);
+
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            const width = 720;
+            const height = 300;
+            const margin = { top: 18, right: 18, bottom: 42, left: 54 };
+            const plotWidth = width - margin.left - margin.right;
+            const plotHeight = height - margin.top - margin.bottom;
+            const startTime = Date.parse(`${selectedDate}T00:00:00Z`);
+            const endTime = startTime + 24 * 60 * 60 * 1000;
+            const visiblePoints = points.filter(
+                point => point.time >= startTime && point.time <= endTime
+            );
+            const heightAt = time => {
+                for (let index = 0; index < points.length - 1; index += 1) {
+                    const first = points[index];
+                    const second = points[index + 1];
+                    if (first.time <= time && time <= second.time) {
+                        const progress = (time - first.time) / (second.time - first.time);
+                        const eased = (1 - Math.cos(Math.PI * progress)) / 2;
+                        return first.height + (second.height - first.height) * eased;
+                    }
+                }
+                return null;
+            };
+            const heights = [
+                ...visiblePoints.map(point => point.height),
+                heightAt(startTime),
+                heightAt(endTime),
+            ].filter(value => value !== null);
+            if (heights.length === 0) {
+                chart.textContent = "No tide predictions available.";
+                return chart;
+            }
+            const minHeight = Math.min(...heights);
+            const maxHeight = Math.max(...heights);
+            const padding = Math.max((maxHeight - minHeight) * 0.18, 0.5);
+            const yMin = minHeight - padding;
+            const yMax = maxHeight + padding;
+            const x = time =>
+                margin.left + ((time - startTime) / (endTime - startTime)) * plotWidth;
+            const y = tideHeight =>
+                margin.top + ((yMax - tideHeight) / (yMax - yMin)) * plotHeight;
+            const svgElement = (name, attributes = {}) => {
+                const element = document.createElementNS(
+                    "http://www.w3.org/2000/svg",
+                    name
+                );
+                for (const [attribute, value] of Object.entries(attributes)) {
+                    element.setAttribute(attribute, value);
+                }
+                return element;
+            };
+
+            svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+            svg.setAttribute("role", "img");
+            svg.setAttribute(
+                "aria-label",
+                `Tide predictions for ${selectedDate}, height in feet`
+            );
+            const title = svgElement("title");
+            title.textContent = `Tide predictions for ${selectedDate}`;
+            svg.append(title);
+
+            for (let tick = 0; tick <= 4; tick += 1) {
+                const value = yMin + ((yMax - yMin) * tick) / 4;
+                const tickY = y(value);
+                svg.append(
+                    svgElement("line", {
+                        x1: margin.left,
+                        x2: width - margin.right,
+                        y1: tickY,
+                        y2: tickY,
+                        class: "tide-chart-grid",
+                    })
+                );
+                const label = svgElement("text", {
+                    x: margin.left - 9,
+                    y: tickY + 4,
+                    "text-anchor": "end",
+                    class: "tide-chart-axis-label",
+                });
+                label.textContent = value.toFixed(1);
+                svg.append(label);
+            }
+
+            for (let hour = 0; hour <= 24; hour += 4) {
+                const tickX = margin.left + (plotWidth * hour) / 24;
+                svg.append(
+                    svgElement("line", {
+                        x1: tickX,
+                        x2: tickX,
+                        y1: margin.top,
+                        y2: height - margin.bottom,
+                        class: "tide-chart-grid",
+                    })
+                );
+                const label = svgElement("text", {
+                    x: tickX,
+                    y: height - margin.bottom + 19,
+                    "text-anchor": hour === 0 ? "start" : hour === 24 ? "end" : "middle",
+                    class: "tide-chart-axis-label",
+                });
+                label.textContent = hour === 24 ? "24:00" : `${String(hour).padStart(2, "0")}:00`;
+                svg.append(label);
+            }
+
+            const axisLabel = svgElement("text", {
+                x: 15,
+                y: margin.top + plotHeight / 2,
+                "text-anchor": "middle",
+                transform: `rotate(-90 15 ${margin.top + plotHeight / 2})`,
+                class: "tide-chart-axis-label",
+            });
+            axisLabel.textContent = "Height (ft)";
+            svg.append(axisLabel);
+
+            const segments = points.slice(0, -1).flatMap((first, index) => {
+                const second = points[index + 1];
+                const segmentStart = Math.max(first.time, startTime);
+                const segmentEnd = Math.min(second.time, endTime);
+                return segmentStart < segmentEnd
+                    ? [{ first, second, segmentStart, segmentEnd }]
+                    : [];
+            });
+            if (segments.length > 0) {
+                const curve = [];
+                const samplesPerSegment = 24;
+                for (let index = 0; index < segments.length; index += 1) {
+                    const { first, second, segmentStart, segmentEnd } = segments[index];
+                    for (
+                        let sample = index === 0 ? 0 : 1;
+                        sample <= samplesPerSegment;
+                        sample += 1
+                    ) {
+                        const time =
+                            segmentStart +
+                            ((segmentEnd - segmentStart) * sample) / samplesPerSegment;
+                        const progress =
+                            (time - first.time) / (second.time - first.time);
+                        const eased = (1 - Math.cos(Math.PI * progress)) / 2;
+                        const value =
+                            first.height + (second.height - first.height) * eased;
+                        curve.push(
+                            `${sample === 0 && index === 0 ? "M" : "L"}${x(time)},${y(value)}`
+                        );
+                    }
+                }
+                svg.append(
+                    svgElement("path", {
+                        d: curve.join(" "),
+                        class: "tide-chart-curve",
+                    })
+                );
+            }
+
+            for (const point of visiblePoints) {
+                const circle = svgElement("circle", {
+                    cx: x(point.time),
+                    cy: y(point.height),
+                    r: 6,
+                    fill: point.type === "high" ? "#c87532" : "var(--accent)",
+                    class: "tide-chart-point",
+                });
+                const description = svgElement("title");
+                description.textContent =
+                    `${point.type === "high" ? "High" : "Low"} tide: ` +
+                    `${point.label}, ${point.height.toFixed(2)} ft`;
+                circle.append(description);
+                svg.append(circle);
+            }
+
+            chart.append(svg);
+            return chart;
+        }
+
         function renderMarkdown(markdown) {
             const content = document.createElement("div");
             content.className = "markdown-content";
@@ -534,8 +1302,6 @@
             ["wind_speed_min", "Wind Speed (Min)"],
             ["wind_direction", "Wind Direction"],
             ["moon_current_phase", "Current Moon Phase"],
-            ["moon_closest_phase", "Closest Moon Phase"],
-            ["moon_closest_phase_date","Closest Moon Phase Date"],
             ["moon_brightness", "Moon Brightness"],
             ["predictions", "Tides"],
             ["detailed_forecast", "Forecast"],
@@ -553,7 +1319,12 @@
                 }
 
                 const entries = Object.entries(result).filter(
-                    ([key]) => key !== "ai_evaluation" && key !== "evaluation_id"
+                    ([key]) =>
+                        key !== "ai_evaluation" &&
+                        key !== "evaluation_id" &&
+                        key !== "moon_brightness" &&
+                        key !== "moon_next_phase" &&
+                        key !== "moon_next_phase_date"
                 );
                 const details = document.createElement("table");
                 for (const [key, value] of entries) {
@@ -565,62 +1336,9 @@
 
                     const definition = document.createElement("td");
                     if (key === "pressure") {
-                        const pressureRows = [
-                            ["current_pressure_hpa", "Current Pressure (hPa)"],
-                            ["pressure_3_hours_ago_hpa", "Pressure 3 Hours Ago (hPa)"],
-                            ["change_3h_hpa", "Change Over 3 Hours (hPa)"],
-                            ["trend", "Trend"],
-                            ["outlook", "Fishing Outlook"],
-                        ];
-                        const pressureTable = document.createElement("table");
-                        pressureTable.className = "tide-table";
-                        const body = document.createElement("tbody");
-                        const hasPressureReadings = pressureRows.some(
-                            ([field]) =>
-                                value?.[field] !== null &&
-                                value?.[field] !== undefined
-                        );
-                        if (!hasPressureReadings && value?.error) {
-                            const pressureRow = document.createElement("tr");
-                            const labelCell = document.createElement("th");
-                            labelCell.scope = "row";
-                            labelCell.textContent = "Unavailable";
-                            const valueCell = document.createElement("td");
-                            valueCell.textContent = value.error;
-                            pressureRow.append(labelCell, valueCell);
-                            body.append(pressureRow);
-                        } else {
-                            for (const [field, label] of pressureRows) {
-                                const pressureRow = document.createElement("tr");
-                                const labelCell = document.createElement("th");
-                                labelCell.scope = "row";
-                                labelCell.textContent = label;
-                                const valueCell = document.createElement("td");
-                                const fieldValue = value?.[field];
-                                valueCell.textContent =
-                                    fieldValue === null || fieldValue === undefined
-                                        ? "Unavailable"
-                                        : field === "current_pressure_hpa" ||
-                                            field === "pressure_3_hours_ago_hpa" ||
-                                            field === "change_3h_hpa"
-                                          ? Number(fieldValue).toFixed(1)
-                                          : String(fieldValue);
-                                pressureRow.append(labelCell, valueCell);
-                                body.append(pressureRow);
-                            }
-                            if (value?.error) {
-                                const pressureRow = document.createElement("tr");
-                                const labelCell = document.createElement("th");
-                                labelCell.scope = "row";
-                                labelCell.textContent = "Note";
-                                const valueCell = document.createElement("td");
-                                valueCell.textContent = value.error;
-                                pressureRow.append(labelCell, valueCell);
-                                body.append(pressureRow);
-                            }
-                        }
-                        pressureTable.append(body);
-                        definition.append(pressureTable);
+                        definition.append(renderPressureIndicator(value));
+                    } else if (key === "moon_current_phase") {
+                        definition.append(renderMoonPhase(value, result.moon_brightness));
                     } else if (key === "waves") {
                         let waveRows = value;
                         if (typeof waveRows === "string") {
@@ -647,96 +1365,9 @@
                                 )
                             );
                         }
-                        if (!Array.isArray(waveRows) || waveRows.length === 0) {
-                            definition.textContent = "No wave data available.";
-                            row.append(definition);
-                            details.append(row);
-                            continue;
-                        }
-
-                        const headings = [
-                            ["date", "Time (local)"],
-                            ["wave_height", "Wave Height (m)"],
-                            ["wave_direction", "Wave Direction (from)"],
-                            ["wave_period", "Wave Period (s)"],
-                            ["wave_peak_period", "Wave Peak Period (s)"],
-                            ["sea_level_height_msl", "Sea Level Height (m)"],
-                        ];
-                        const fields = [
-                            ...new Set(
-                                waveRows.flatMap(wave =>
-                                    wave !== null && typeof wave === "object"
-                                        ? Object.keys(wave)
-                                        : []
-                                )
-                            ),
-                        ];
-                        const headingLabels = new Map(headings);
-                        const waves = document.createElement("table");
-                        waves.className = "tide-table";
-                        const header = document.createElement("thead");
-                        const headerRow = document.createElement("tr");
-                        for (const field of fields) {
-                            const cell = document.createElement("th");
-                            cell.scope = "col";
-                            cell.textContent = headingLabels.get(field) || field;
-                            headerRow.append(cell);
-                        }
-                        header.append(headerRow);
-
-                        const body = document.createElement("tbody");
-                        for (const wave of waveRows) {
-                            const waveRow = document.createElement("tr");
-                            for (const field of fields) {
-                                const cell = document.createElement("td");
-                                const fieldValue =
-                                    wave !== null && typeof wave === "object"
-                                        ? wave[field]
-                                        : null;
-                                cell.textContent =
-                                    field === "wave_direction"
-                                        ? formatWaveDirection(fieldValue)
-                                        : String(fieldValue ?? "");
-                                waveRow.append(cell);
-                            }
-                            body.append(waveRow);
-                        }
-                        waves.append(header, body);
-                        definition.append(waves);
+                        definition.append(renderWaveChart(waveRows, result.date));
                     } else if (key === "predictions" && Array.isArray(value)) {
-                        const tides = document.createElement("table");
-                        tides.className = "tide-table";
-                        const headings = [
-                            ["type", "Type"],
-                            ["t", "Time (local)"],
-                            ["v", "Height (ft)"],
-                        ];
-                        const header = document.createElement("thead");
-                        const headerRow = document.createElement("tr");
-                        for (const [, label] of headings) {
-                            const cell = document.createElement("th");
-                            cell.scope = "col";
-                            cell.textContent = label;
-                            headerRow.append(cell);
-                        }
-                        header.append(headerRow);
-
-                        const body = document.createElement("tbody");
-                        for (const prediction of value) {
-                            const tideRow = document.createElement("tr");
-                            for (const [field] of headings) {
-                                const cell = document.createElement("td");
-                                const fieldValue =
-                                    prediction !== null && typeof prediction === "object"
-                                        ? prediction[field]
-                                        : null;
-                                cell.textContent = String(fieldValue ?? "");
-                                tideRow.append(cell);
-                            }
-                            body.append(tideRow);
-                        }
-                        tides.append(header, body);
-                        definition.append(tides);
+                        definition.append(renderTideChart(value, result.date));
                     } else {
                         definition.textContent =
                             value !== null && typeof value === "object"

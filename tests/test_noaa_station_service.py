@@ -37,9 +37,9 @@ class NOAAStationServiceTests(unittest.TestCase):
     @patch(
         "services.forecast_service.pressure.get_fishing_pressure_trend",
         return_value=PressureTrend(
-            current_pressure_hpa=1012.0,
-            pressure_3_hours_ago_hpa=1010.0,
-            change_3h_hpa=2.0,
+            current_pressure_inhg=29.88,
+            pressure_3_hours_ago_inhg=29.82,
+            change_3h_inhg=0.06,
             trend="Rising rapidly",
             outlook="Pressure outlook.",
         ),
@@ -66,7 +66,12 @@ class NOAAStationServiceTests(unittest.TestCase):
                     start_time=datetime(2026, 10, 14, 15, tzinfo=UTC),
                     precipitation_probability=10,
                     temperature=20,
-                    wind_speed={"maxValue": 10, "minValue": 5},
+                    temperature_unit="wmoUnit:degC",
+                    wind_speed={
+                        "maxValue": 10,
+                        "minValue": 5,
+                        "unitCode": "wmoUnit:km_h-1",
+                    },
                     wind_direction="E",
                     detailed_forecast="Clear.",
                 )
@@ -100,11 +105,15 @@ class NOAAStationServiceTests(unittest.TestCase):
             29.0,
             -80.9,
             get_location_timezone(get_city_data.return_value),
+            requested_date,
         )
         get_pressure.assert_called_once_with(29.0, -80.9)
         self.assertEqual(result.city, "New Smyrna Beach")
         self.assertEqual(result.start_time, "2026-10-14 11:00")
-        self.assertEqual(result.pressure.change_3h_hpa, 2.0)
+        self.assertEqual(result.temp, 68)
+        self.assertEqual(result.wind_speed_max, 6.21)
+        self.assertEqual(result.wind_speed_min, 3.11)
+        self.assertEqual(result.pressure.change_3h_inhg, 0.06)
 
 
 if __name__ == "__main__":

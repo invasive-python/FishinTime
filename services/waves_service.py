@@ -1,3 +1,4 @@
+from datetime import date
 from zoneinfo import ZoneInfo
 
 import openmeteo_requests
@@ -12,19 +13,21 @@ openmeteo = openmeteo_requests.Client(session = retry_session)
 
 
 def get_waves_data(
-    lat: float, long: float, location_timezone: ZoneInfo
+    lat: float, long: float, location_timezone: ZoneInfo, forecast_date: date
 ) -> pd.DataFrame | None:
     url = "https://marine-api.open-meteo.com/v1/marine?"
     params = {
         "latitude": lat,
         "longitude": long,
+        "start_date": forecast_date.isoformat(),
+        "end_date": forecast_date.isoformat(),
+        "timezone": location_timezone.key,
+        "wave_height_unit": "ft",
         "hourly": [
             "wave_height",
             "wave_direction",
             "wave_period",
-            "sea_level_height_msl",
         ],
-        "forecast_days": "1",
     }
 
     responses = openmeteo.weather_api(url, params = params)
@@ -34,7 +37,6 @@ def get_waves_data(
     hourly_wave_height = hourly.Variables(0).ValuesAsNumpy()
     hourly_wave_direction = hourly.Variables(1).ValuesAsNumpy()
     hourly_wave_period = hourly.Variables(2).ValuesAsNumpy()
-    hourly_sea_level_height_msl = hourly.Variables(3).ValuesAsNumpy()
 
     hourly_data = {
         "date": pd.date_range(
@@ -52,7 +54,6 @@ def get_waves_data(
     hourly_data["wave_height"] = hourly_wave_height
     hourly_data["wave_direction"] = hourly_wave_direction
     hourly_data["wave_period"] = hourly_wave_period
-    hourly_data["sea_level_height_msl"] = hourly_sea_level_height_msl
 
     hourly_dataframe = pd.DataFrame(data = hourly_data)
     print("\nHourly data\n", hourly_dataframe)

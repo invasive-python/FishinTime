@@ -65,9 +65,13 @@ def is_today_or_future(date_string: str, date_format: str = "%Y-%m-%d") -> bool:
 
 @router.get(
     "/forecast/get_forecast",
-    response_model=ForecastResponse,
     summary="Get forecast periods for a city and date",
     tags=["get_forecast"],
+    responses={
+        400: {"description": "Date must be today or in the future."},
+        404: {"description": "Forecast or NOAA tide station not found."},
+        502: {"description": "External provider request or response failed"}
+    },
 )
 def get_forecast(
     request: Request,
@@ -98,20 +102,6 @@ def get_forecast(
         )
         forecast.evaluation_id = evaluation_id
 
-        print(f"{forecast.city} Fishing Forecast for {forecast.date}:")
-        print("----------------------")
-        print("precipitation: " + str(forecast.precipitation_probability) + "% chance")
-        print("precip.time: " + str(forecast.start_time))
-        print("temperature: " + str(forecast.temp) + "°F")
-        print("wind speed (max): " + str(forecast.wind_speed_max) + " mph")
-        print("wind speed (min): " + str(forecast.wind_speed_min) + " mph")
-        print("wind direction: " + forecast.wind_direction)
-        print("current moon phase: " + forecast.moon_current_phase)
-        print("next moon phase: (" + forecast.moon_closest_phase_date + ") " + forecast.moon_closest_phase)
-        print("moon brightness: " + forecast.moon_brightness)
-        print("tides: " + str(forecast.predictions))
-        print("forecast: " + forecast.detailed_forecast)
-
         return forecast
 
     except HTTPException:
@@ -124,9 +114,9 @@ def get_forecast(
 
 @router.get(
     "/forecast/evaluation/{evaluation_id}",
-    response_model=EvaluationJobResponse,
     summary="Get the status and result of an AI fishing evaluation",
     tags=["get_forecast"],
+    responses={404: {"description": "AI evaluation not found."}},
 )
 def get_evaluation_status(
     evaluation_id: str, request: Request

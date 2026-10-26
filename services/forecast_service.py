@@ -49,7 +49,8 @@ def serve_forecast(city, state, date):
             station_id, parsed_date.isoformat()
         )
 
-        waves_data = waves.get_waves_data(lat, long, location_timezone,
+        waves_data = waves.get_waves_data(
+            lat, long, location_timezone, parsed_date
         )
 
         pressure_data = pressure.get_fishing_pressure_trend(lat, long)
@@ -66,12 +67,28 @@ def serve_forecast(city, state, date):
             location_timezone
         ).strftime("%Y-%m-%d %H:%M")
         temperature = forecast_period.temperature
-        fahrenheit = ((temperature * 1.8) + 32) if temperature is not None else 0
+        temperature_unit = (
+            getattr(forecast_period, "temperature_unit", None) or ""
+        ).lower()
+        if temperature is not None and (
+            "degc" in temperature_unit
+            or temperature_unit in {"c", "celsius"}
+        ):
+            temperature = (temperature * 1.8) + 32
 
         wind_speed = forecast_period.wind_speed or {}
         wind_speed_max = float(wind_speed.get("maxValue", wind_speed.get("value", 0)))
         wind_speed_min = float(wind_speed.get("minValue", wind_speed.get("value", 0)))
-        conversion_factor = 0.621371
+        wind_unit = str(wind_speed.get("unitCode", "")).lower()
+        wind_conversion = (
+            2.236936
+            if "m_s-1" in wind_unit or "m/s" in wind_unit
+            else 0.621371
+            if "km_h-1" in wind_unit or "km/h" in wind_unit
+            else 1.15078
+            if "knot" in wind_unit
+            else 1.0
+        )
 
         closest_phase = _nested_lookup(phase_data, "data", "closestphase") or {}
         closest_date = "-".join(
@@ -88,9 +105,9 @@ def serve_forecast(city, state, date):
             date=str(parsed_date),
             precipitation_probability=int(precipitation),
             start_time=start_time,
-            temp=int(round(fahrenheit)),
-            wind_speed_max=round(wind_speed_max * conversion_factor, 2),
-            wind_speed_min=round(wind_speed_min * conversion_factor, 2),
+            temp=int(round(temperature)) if temperature is not None else 0,
+            wind_speed_max=round(wind_speed_max * wind_conversion, 2),
+            wind_speed_min=round(wind_speed_min * wind_conversion, 2),
             wind_direction=forecast_period.wind_direction or "",
             moon_current_phase=str(
                 _nested_lookup(phase_data, "data", "curphase")

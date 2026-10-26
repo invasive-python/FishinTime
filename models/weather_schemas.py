@@ -33,9 +33,9 @@ class WeatherResponse(BaseModel):
 
 
 class PressureTrend(BaseModel):
-    current_pressure_hpa: float | None = None
-    pressure_3_hours_ago_hpa: float | None = None
-    change_3h_hpa: float | None = None
+    current_pressure_inhg: float | None = None
+    pressure_3_hours_ago_inhg: float | None = None
+    change_3h_inhg: float | None = None
     trend: str | None = None
     outlook: str | None = None
     error: str | None = None
@@ -68,8 +68,8 @@ class ForecastResponse(BaseModel):
             }
         ),
     ] = None
-    detailed_forecast: str
     pressure: PressureTrend | None = None
+    detailed_forecast: str
     ai_evaluation: str = ""
     evaluation_id: str | None = None
 

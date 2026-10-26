@@ -3,7 +3,6 @@ from unittest.mock import Mock, patch
 
 import requests
 
-from models.weather_schemas import PressureTrend
 from services.pressure_forecaster import get_fishing_pressure_trend
 
 
@@ -12,7 +11,7 @@ class PressureForecasterTests(unittest.TestCase):
     def test_uses_open_meteo_forecast_api_and_json_response(self, get):
         response = Mock()
         response.json.return_value = {
-            "current": {"pressure_msl": 1012.0, "time": "2026-10-23T12:00"},
+            "current": {"pressure_msl": 29.88, "time": "2026-10-23T12:00"},
             "hourly": {
                 "time": [
                     "2026-10-23T09:00",
@@ -20,7 +19,7 @@ class PressureForecasterTests(unittest.TestCase):
                     "2026-10-23T11:00",
                     "2026-10-23T12:00",
                 ],
-                "pressure_msl": [1010.0, 1010.5, 1011.0, 1012.0],
+                "pressure_msl": [29.82, 29.835, 29.865, 29.88],
             },
         }
         get.return_value = response
@@ -33,16 +32,16 @@ class PressureForecasterTests(unittest.TestCase):
             "https://api.open-meteo.com/v1/forecast",
         )
         self.assertEqual(get.call_args.kwargs["params"]["hourly"], "pressure_msl")
+        self.assertEqual(get.call_args.kwargs["params"]["pressure_unit"], "inHg")
+        self.assertEqual(pressure.current_pressure_inhg, 29.88)
         self.assertEqual(get.call_args.kwargs["timeout"], 20)
+        self.assertEqual(pressure.current_pressure_inhg, 29.88)
+        self.assertEqual(pressure.pressure_3_hours_ago_inhg, 29.82)
+        self.assertAlmostEqual(pressure.change_3h_inhg, 0.06)
+        self.assertEqual(pressure.trend, "Rising rapidly")
         self.assertEqual(
-            pressure,
-            PressureTrend(
-                current_pressure_hpa=1012.0,
-                pressure_3_hours_ago_hpa=1010.0,
-                change_3h_hpa=2.0,
-                trend="Rising rapidly",
-                outlook="Poor: rapidly rising pressure may slow fish activity.",
-            ),
+            pressure.outlook,
+            "Poor: rapidly rising pressure may slow fish activity.",
         )
 
     @patch("services.pressure_forecaster.requests.get")
@@ -66,7 +65,7 @@ class PressureForecasterTests(unittest.TestCase):
         response = Mock()
         response.json.return_value = {
             "current": {
-                "pressure_msl": 1014.5,
+                "pressure_msl": 29.9,
                 "time": "2026-10-23T19:45",
             },
             "hourly": {
@@ -77,16 +76,16 @@ class PressureForecasterTests(unittest.TestCase):
                     "2026-10-23T19:00",
                     "2026-10-23T20:00",
                 ],
-                "pressure_msl": [1014.4, 1014.4, 1014.3, 1014.4, 1014.5],
+                "pressure_msl": [29.899, 29.899, 29.899, 29.899, 29.9],
             },
         }
         get.return_value = response
 
         pressure = get_fishing_pressure_trend(26.23, -80.12)
 
-        self.assertEqual(pressure.current_pressure_hpa, 1014.5)
-        self.assertEqual(pressure.pressure_3_hours_ago_hpa, 1014.4)
-        self.assertAlmostEqual(pressure.change_3h_hpa, 0.1)
+        self.assertEqual(pressure.current_pressure_inhg, 29.9)
+        self.assertEqual(pressure.pressure_3_hours_ago_inhg, 29.899)
+        self.assertAlmostEqual(pressure.change_3h_inhg, 0.001)
         self.assertEqual(pressure.trend, "Stable")
 
 

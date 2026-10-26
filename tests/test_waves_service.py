@@ -1,5 +1,5 @@
 import unittest
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from types import SimpleNamespace
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
@@ -13,7 +13,7 @@ class WavesServiceTests(unittest.TestCase):
         start_timestamp = int(
             datetime(2026, 10, 23, 12, tzinfo=UTC).timestamp()
         )
-        variable_values = [[1.0, 1.1], [90, 95], [5, 6], [0.2, 0.3]]
+        variable_values = [[3.3, 3.6], [90, 95], [5, 6]]
         hourly = SimpleNamespace(
             Variables=lambda index: SimpleNamespace(
                 ValuesAsNumpy=lambda: variable_values[index]
@@ -24,7 +24,12 @@ class WavesServiceTests(unittest.TestCase):
         )
         weather_api.return_value = [SimpleNamespace(Hourly=lambda: hourly)]
 
-        waves = get_waves_data(25.76, -80.19, ZoneInfo("America/New_York"))
+        waves = get_waves_data(
+            25.76,
+            -80.19,
+            ZoneInfo("America/New_York"),
+            date(2026, 10, 23),
+        )
 
         self.assertEqual(
             [timestamp.isoformat() for timestamp in waves["date"]],
@@ -32,6 +37,22 @@ class WavesServiceTests(unittest.TestCase):
                 "2026-10-23T08:00:00-04:00",
                 "2026-10-23T09:00:00-04:00",
             ],
+        )
+        self.assertEqual(
+            weather_api.call_args.kwargs["params"]["wave_height_unit"],
+            "ft",
+        )
+        self.assertEqual(
+            weather_api.call_args.kwargs["params"]["start_date"],
+            "2026-10-23",
+        )
+        self.assertEqual(
+            weather_api.call_args.kwargs["params"]["end_date"],
+            "2026-10-23",
+        )
+        self.assertEqual(
+            weather_api.call_args.kwargs["params"]["timezone"],
+            "America/New_York",
         )
 
 

@@ -19,7 +19,7 @@ class TideServiceTests(unittest.TestCase):
         predictions = get_tides_from_station_id_and_dates("8721164", "2026-10-16")
 
         self.assertEqual(predictions, get_tide_data_mock.return_value["predictions"])
-        get_tide_data_mock.assert_called_once_with("8721164", "20261016", "20261017")
+        get_tide_data_mock.assert_called_once_with("8721164", "20261015", "20261018")
 
     @patch("services.tides_service.requests.get")
     def test_http_errors_are_propagated(self, get):

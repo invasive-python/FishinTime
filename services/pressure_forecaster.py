@@ -12,6 +12,7 @@ def get_fishing_pressure_trend(lat: float, lon: float) -> PressureTrend:
         "longitude": lon,
         "hourly": "pressure_msl",
         "current": "pressure_msl",
+        "pressure_unit": "inHg",
         "past_days": 1,  # Ensures we have historical data points to look backward
         "forecast_days": 1
     }
@@ -57,18 +58,18 @@ def get_fishing_pressure_trend(lat: float, lon: float) -> PressureTrend:
 
     delta = current_pressure - pressure_3_hours_ago
 
-    if delta < -1.0:
+    if delta < -0.02953:
         trend = "Falling rapidly"
         outlook = (
             "Excellent: a pre-frontal pressure drop may indicate increased feeding."
         )
-    elif delta < -0.2:
+    elif delta < -0.005906:
         trend = "Falling steadily"
         outlook = "Good: falling pressure may indicate an active feeding window."
-    elif delta > 1.0:
+    elif delta > 0.02953:
         trend = "Rising rapidly"
         outlook = "Poor: rapidly rising pressure may slow fish activity."
-    elif delta > 0.2:
+    elif delta > 0.005906:
         trend = "Rising steadily"
         outlook = "Fair: the bite may be slowing; adjust bait and location."
     else:
@@ -76,9 +77,9 @@ def get_fishing_pressure_trend(lat: float, lon: float) -> PressureTrend:
         outlook = "Neutral: rely on tides and structure to find feeding fish."
 
     return PressureTrend(
-        current_pressure_hpa=current_pressure,
-        pressure_3_hours_ago_hpa=pressure_3_hours_ago,
-        change_3h_hpa=delta,
+        current_pressure_inhg=current_pressure,
+        pressure_3_hours_ago_inhg=pressure_3_hours_ago,
+        change_3h_inhg=delta,
         trend=trend,
         outlook=outlook,
     )
