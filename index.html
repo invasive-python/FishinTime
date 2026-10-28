@@ -2,6 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script>
+        const isMobileDevice =
+            navigator.userAgentData?.mobile === true ||
+            /Android|iPhone|iPad|iPod|IEMobile|Windows Phone/i.test(navigator.userAgent) ||
+            (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+        if (isMobileDevice) {
+            document.documentElement.classList.add("mobile-device");
+            const viewport = document.createElement("meta");
+            viewport.name = "viewport";
+            viewport.content = "width=device-width, initial-scale=1";
+            document.head.append(viewport);
+        }
+    </script>
     <title>Surf Fishin' Time</title>
     <style>
         :root {
@@ -116,6 +129,9 @@
         }
         .tide-chart {
             min-width: 0;
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
             color: var(--ink);
             white-space: normal;
         }
@@ -154,7 +170,7 @@
         .tide-chart-grid { stroke: var(--border); stroke-width: 1; }
         .tide-chart-axis-label {
             fill: var(--muted);
-            font: 12px "Segoe UI", sans-serif;
+            font: 14px "Segoe UI", sans-serif;
         }
         .tide-chart-curve {
             fill: none;
@@ -169,6 +185,9 @@
         }
         .wave-chart {
             min-width: 0;
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
             color: var(--ink);
             white-space: normal;
         }
@@ -277,8 +296,45 @@
         .markdown-content pre { margin: .5em 0; }
         .markdown-content pre { white-space: pre-wrap; }
 
+        .mobile-device .about-section { display: none; }
+
         @media (max-width: 600px) {
-            body { padding: 28px 15px; }
+            body {
+                padding: 24px 12px;
+                line-height: 1.5;
+            }
+            .masthead { margin-bottom: 22px; }
+            .eyebrow { font-size: .72rem; }
+            .intro { margin-top: 10px; }
+            .panel { padding: 20px 16px; border-radius: 16px; }
+            .panel-copy { line-height: 1.5; }
+            label { font-size: 1rem; }
+            select, input, .submit-button { min-height: 50px; font-size: 1rem; }
+            #forecastResult, #evaluation { padding: 14px; }
+            #forecastResult table, #forecastResult tbody {
+                display: block;
+                width: 100%;
+            }
+            #forecastResult table { table-layout: fixed; }
+            #forecastResult tr {
+                display: grid;
+                gap: 5px;
+                padding: 12px 0;
+                border-bottom: 1px solid var(--table-border);
+            }
+            #forecastResult td {
+                display: block;
+                min-width: 0;
+                padding: 0;
+                border: 0;
+                overflow-wrap: anywhere;
+            }
+            #forecastResult td:first-child { font-weight: 800; }
+            .tide-chart-legend { gap: 10px 16px; font-size: .9rem; }
+            .tide-chart-note { font-size: .9rem; }
+            .tide-chart svg, .wave-chart svg { min-width: 640px; }
+            .about-section summary { min-height: 44px; }
+            .about-content { line-height: 1.6; }
         }
     </style>
 </head>
