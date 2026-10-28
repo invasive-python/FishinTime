@@ -1,6 +1,12 @@
 fastapi
+pydantic
 openai
 boto3
+botocore
 python-dotenv
 requests
+pandas
+openmeteo-requests
+requests-cache
+retry-requests
 uvicorn
