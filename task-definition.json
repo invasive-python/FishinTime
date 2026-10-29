@@ -1,9 +1,9 @@
 {
-    "taskDefinitionArn": "arn:aws:ecs:us-east-2:462025067652:task-definition/fishintime-backend:13",
+    "taskDefinitionArn": "arn:aws:ecs:us-east-2:757266935832:task-definition/fishintime-backend:1",
     "containerDefinitions": [
         {
             "name": "fishintime-backend",
-            "image": "462025067652.dkr.ecr.us-east-2.amazonaws.com/fishintime-backend:latest",
+            "image": "757266935832.dkr.ecr.us-east-2.amazonaws.com/fishintime-backend:latest",
             "cpu": 0,
             "portMappings": [
                 {
@@ -28,11 +28,11 @@
             "secrets": [
                 {
                     "name": "FishinSecret_OpenAI",
-                    "valueFrom": "arn:aws:secretsmanager:us-east-2:462025067652:secret:FishinSecret_OpenAI-q0M642"
+                    "valueFrom": "arn:aws:secretsmanager:us-east-2:757266935832:secret:FishinSecret_OpenAI-q0M642"
                 },
                 {
                     "name": "FishinSecret_Agent_Id",
-                    "valueFrom": "arn:aws:secretsmanager:us-east-2:462025067652:secret:FishinSecret_Agent_Id-vqIBkc"
+                    "valueFrom": "arn:aws:secretsmanager:us-east-2:757266935832:secret:FishinSecret_Agent_Id-vqIBkc"
                 }
             ],
             "logConfiguration": {
@@ -47,8 +47,8 @@
         }
     ],
     "family": "fishintime-backend",
-    "taskRoleArn": "arn:aws:iam::462025067652:role/fishintime-task-role",
-    "executionRoleArn": "arn:aws:iam::462025067652:role/ecsTaskExecutionRole",
+    "taskRoleArn": "arn:aws:iam::757266935832:role/fishintime-task-role",
+    "executionRoleArn": "arn:aws:iam::757266935832:role/ecsTaskExecutionRole",
     "networkMode": "awsvpc",
     "revision": 11,
     "volumes": [],
@@ -94,5 +94,5 @@
     "cpu": "256",
     "memory": "512",
     "registeredAt": "2026-10-20T17:19:33.146000-04:00",
-    "registeredBy": "arn:aws:iam::462025067652:user/fishintime-local-dev"
+    "registeredBy": "arn:aws:iam::757266935832:user/fishintime-local-dev"
 }

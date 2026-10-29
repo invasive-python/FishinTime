@@ -2,7 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Surf Fishin' Time</title>
+    <script>
+        const isMobileDevice =
+            navigator.userAgentData?.mobile === true ||
+            /Android|iPhone|iPad|iPod|IEMobile|Windows Phone/i.test(navigator.userAgent) ||
+            (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+        if (isMobileDevice) {
+            document.documentElement.classList.add("mobile-device");
+            const viewport = document.createElement("meta");
+            viewport.name = "viewport";
+            viewport.content = "width=device-width, initial-scale=1";
+            document.head.append(viewport);
+        }
+    </script>
+    <title>Tidal Fishin' Time</title>
     <style>
         :root {
             font-family: "Segoe UI", sans-serif;
@@ -277,15 +290,63 @@
         .markdown-content pre { margin: .5em 0; }
         .markdown-content pre { white-space: pre-wrap; }
 
-        @media (max-width: 600px) {
-            body { padding: 28px 15px; }
+        .mobile-device body {
+            padding: 24px 12px;
+            line-height: 1.5;
         }
+        .mobile-device .masthead { margin-bottom: 22px; }
+        .mobile-device .eyebrow { font-size: .72rem; }
+        .mobile-device .intro { margin-top: 10px; }
+        .mobile-device .panel { padding: 20px 16px; border-radius: 16px; }
+        .mobile-device .panel-copy { line-height: 1.5; }
+        .mobile-device label { font-size: 1rem; }
+        .mobile-device select,
+        .mobile-device input,
+        .mobile-device .submit-button {
+            min-height: 50px;
+            font-size: 1rem;
+        }
+        .mobile-device #forecastResult,
+        .mobile-device #evaluation { padding: 14px; }
+        .mobile-device #forecastResult table,
+        .mobile-device #forecastResult tbody {
+            display: block;
+            width: 100%;
+        }
+        .mobile-device #forecastResult table { table-layout: fixed; }
+        .mobile-device #forecastResult tr {
+            display: grid;
+            gap: 5px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--table-border);
+        }
+        .mobile-device #forecastResult td {
+            display: block;
+            min-width: 0;
+            padding: 0;
+            border: 0;
+            overflow-wrap: anywhere;
+        }
+        .mobile-device #forecastResult td:first-child { font-weight: 800; }
+        .mobile-device .tide-chart,
+        .mobile-device .wave-chart {
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .mobile-device .tide-chart-legend { gap: 10px 16px; font-size: .9rem; }
+        .mobile-device .tide-chart-note { font-size: .9rem; }
+        .mobile-device .tide-chart svg,
+        .mobile-device .wave-chart svg { min-width: 640px; }
+        .mobile-device .tide-chart-axis-label,
+        .mobile-device .wave-chart .tide-chart-axis-label { font-size: 14px; }
+        .mobile-device .about-section { display: none; }
     </style>
 </head>
 <body>
     <main class="page-shell">
         <header class="masthead">
-            <p class="eyebrow">Surf Fishing Conditions</p>
+            <p class="eyebrow">Tidal Fishing Conditions</p>
             <h1>Find your fishing window.</h1>
             <p class="intro">Choose a shoreline and date to check the conditions before you head out.</p>
         </header>
@@ -323,7 +384,7 @@
             <summary>About this website</summary>
             <div class="about-content">
                 <p>
-                    Surf Fishin' Time combines shoreline, weather, tide, and moon
+                    Tidal Fishin' Time combines shoreline, weather, tide, and moon
                     information for a selected station and date, then asks an
                     OpenAI agent to provide an overall fishing recommendation.
                 </p>
