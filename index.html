@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script src="./config.js"></script>
     <script>
         const isMobileDevice =
             navigator.userAgentData?.mobile === true ||
@@ -15,7 +16,7 @@
             document.head.append(viewport);
         }
     </script>
-    <title>Surf Fishin' Time</title>
+    <title>Tidal Fishin' Time</title>
     <style>
         :root {
             font-family: "Segoe UI", sans-serif;
@@ -341,7 +342,7 @@
 <body>
     <main class="page-shell">
         <header class="masthead">
-            <p class="eyebrow">Surf Fishing Conditions</p>
+            <p class="eyebrow">Tidal Fishing Conditions</p>
             <h1>Find your fishing window.</h1>
             <p class="intro">Choose a shoreline and date to check the conditions before you head out.</p>
         </header>
@@ -375,68 +376,14 @@
             <div id="evaluation" aria-live="polite"></div>
         </section>
 
-        <details class="panel about-section">
-            <summary>About this website</summary>
-            <div class="about-content">
-                <p>
-                    Surf Fishin' Time combines shoreline, weather, tide, and moon
-                    information for a selected station and date, then asks an
-                    OpenAI agent to provide an overall fishing recommendation.
-                </p>
-
-                <h3>How it works</h3>
-                <p>
-                    This page is served by a Python FastAPI application. The
-                    browser calls the app's <code>/api/states</code> and
-                    <code>/api/cities</code> endpoints to populate the station
-                    selectors, then requests
-                    <code>/forecast/get_forecast</code> for the selected station
-                    and date. The backend assembles the provider data and returns
-                    it to the page for display and submits to OpenAI for fishing
-                    outlook generation.
-                </p>
-
-                <h3>External APIs</h3>
-                <ul>
-                    <li>
-                        NOAA Tides &amp; Currents provides tide-prediction station
-                        metadata and tide predictions.
-                    </li>
-                    <li>
-                        The National Weather Service API provides local forecast
-                        grid data and forecast periods.
-                    </li>
-                    <li>
-                        Open-Meteo's geocoding API resolves city names to
-                        coordinates and time zones.
-                    </li>
-                    <li>
-                        The U.S. Naval Observatory API provides moon-phase data.
-                    </li>
-                    <li>
-                        The OpenAI API runs the configured agent to generate a
-                        fishing recommendation from the assembled conditions.
-                    </li>
-                </ul>
-                <h3>AWS Architecture — Fishintime</h3>
-                <ul>
-                    <li><em>Amazon ECS with AWS Fargate</em>: Runs the containerized Python backend without requiring server management.</li>
-                    <li><em>Amazon ECR</em>: Stores Docker images used to deploy the backend.</li>
-                    <li><em>Application Load Balancer</em>: Routes incoming HTTP requests to the backend service.</li>
-                    <li><em>AWS Secrets Manager</em>: Securely stores the OpenAI API key.</li>
-                    <li><em>Amazon CloudWatch</em>: Collects application logs for monitoring and troubleshooting.</li>
-                    <li><em>AWS IAM</em>: Manage roles and permissions</li>
-                    <li><em>VPC and security groups</em>: Manage permissions and network access.</li>
-                </ul>
-                <p>
-                    <img src="./res/mermaid-diagram.png" alt="diagram"/>
-                </p>
-            </div>
-        </details>
     </main>
 
     <script>
-        const API_BASE = "/api";
+        const API_BASE_URL = (
+            window.FISHINTIME_API_BASE_URL || window.location.origin
+        ).replace(/\/+$/, "");
+        const API_BASE = `${API_BASE_URL}/api`;
+        const apiUrl = path => `${API_BASE_URL}${path}`;
         const stateSelect = document.getElementById("stateSelect");
         const citySelect = document.getElementById("citySelect");
         const forecastForm = document.getElementById("forecastForm");
@@ -460,7 +407,7 @@
             while (requestId === activeEvaluationRequest) {
                 await new Promise(resolve => setTimeout(resolve, 1500));
                 const response = await fetch(
-                    `/forecast/evaluation/${encodeURIComponent(evaluationId)}`
+                    apiUrl(`/forecast/evaluation/${encodeURIComponent(evaluationId)}`)
                 );
                 const result = await response.json();
                 if (!response.ok) {
@@ -1367,7 +1314,7 @@
 
             try {
                 const response = await fetch(
-                    `/forecast/get_forecast?${params.toString()}`
+                    apiUrl(`/forecast/get_forecast?${params.toString()}`)
                 );
                 const result = await response.json();
                 if (!response.ok) {

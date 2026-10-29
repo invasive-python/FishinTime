@@ -3,7 +3,9 @@
 This Terraform project reconstructs the FishinTime infrastructure from the prior deployment chats:
 
 - Region `us-east-2` (Ohio)
-- Public Application Load Balancer on HTTP port 80
+- Public Application Load Balancer on HTTP port 80 (redirects to HTTPS) and HTTPS port 443
+- ACM-managed public TLS certificate for `api.<domain_name>`, validated through Route 53
+- Route 53 alias record for the API hostname
 - ECS Fargate service with one task by default, 256 CPU / 512 MiB
 - FastAPI/Uvicorn container on port 8000; ALB health check `/health`, HTTP 200
 - ECR repository `fishintime-backend`
@@ -16,7 +18,7 @@ This Terraform project reconstructs the FishinTime infrastructure from the prior
 1. This creates resources in the AWS account selected by your CLI credentials. Verify the account first.
 2. The secret resources are created without values. Add the values outside Terraform so the secret contents are not embedded in configuration/state.
 3. The app code in the prior chats calls `get_secret("FishinSecret_OpenAI")` and `get_secret("FishinSecret_Agent_Id")`; check your current helper to confirm whether it expects raw strings or JSON.
-4. This recreates the prior public HTTP demo architecture, not HTTPS/custom-domain support.
+4. The default HTTPS configuration creates a public Route 53 hosted zone for `tidalfishintime.com` (about $0.50/month). The registered domain must delegate DNS to that hosted zone's name servers before ACM can validate the certificate.
 5. Fargate tasks receive public IPs so they can call OpenAI, NOAA, and USNO without a NAT gateway. The task security group only allows inbound app traffic from the ALB.
 6. If a secret name is pending deletion from a prior attempt, AWS may prevent immediate reuse. Restore it or wait until its recovery window expires.
 7. The old account had Organizations policy complications. If the new account belongs to an organization, check its service control policies allow these resources/actions.
@@ -112,6 +114,21 @@ the secret string; the application parses the expected field from it.
 
 ## 5. Plan and create the full stack
 
+Confirm that the AWS CLI credentials select the account containing the existing
+FishinTime deployment. The default API hostname is
+`api.tidalfishintime.com`; override `domain_name` if your registered domain
+differs.
+
+```bash
+aws sts get-caller-identity
+terraform apply -target=aws_route53_zone.main
+terraform output -json domain_name_servers
+```
+
+Set the returned nameservers at the domain registrar for `tidalfishintime.com`.
+Wait for DNS delegation to propagate before continuing. Then plan and apply the
+certificate, HTTPS listener, and API alias record:
+
 ```bash
 terraform plan -out fishintime.tfplan
 ```
@@ -140,6 +157,10 @@ aws elbv2 describe-target-health \
 
 aws logs tail /ecs/fishintime-backend --follow --region "$AWS_REGION"
 ```
+
+The `load_balancer_url` output is the HTTPS API URL. Configure mobile frontend
+builds to use that origin in `config.js`. The HTTP listener redirects to HTTPS;
+clients should use the HTTPS URL directly.
 
 ## What this template reconstructs—and what it cannot know
 

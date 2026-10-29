@@ -10,6 +10,12 @@ variable "project_name" {
   default     = "fishintime"
 }
 
+variable "domain_name" {
+  description = "Registered domain with a public Route 53 hosted zone for the API."
+  type        = string
+  default     = "tidalfishintime.com"
+}
+
 variable "container_image_tag" {
   description = "ECR image tag to deploy. Push this tag before applying if the service is being created for the first time."
   type        = string
@@ -17,8 +23,8 @@ variable "container_image_tag" {
 }
 
 variable "container_port" {
-  type        = number
-  default     = 8000
+  type    = number
+  default = 8000
 }
 
 variable "task_cpu" {
@@ -39,7 +45,13 @@ variable "desired_count" {
 }
 
 variable "allowed_http_cidr" {
-  description = "CIDR allowed to access the public HTTP load balancer. Use 0.0.0.0/0 for a public demo site."
+  description = "CIDR allowed to reach the HTTP-to-HTTPS redirect listener."
+  type        = string
+  default     = "0.0.0.0/0"
+}
+
+variable "allowed_https_cidr" {
+  description = "CIDR allowed to access the public HTTPS API."
   type        = string
   default     = "0.0.0.0/0"
 }
@@ -57,4 +69,29 @@ variable "secret_openai_name" {
 variable "secret_agent_id_name" {
   type    = string
   default = "FishinSecret_Agent_Id"
+}
+
+variable "cognito_domain_prefix" {
+  description = "Globally unique Cognito hosted-domain prefix."
+  type        = string
+}
+
+variable "cognito_callback_urls" {
+  description = "Exact allowed sign-in callback URLs."
+  type        = list(string)
+}
+
+variable "cognito_logout_urls" {
+  description = "Exact allowed sign-out URLs."
+  type        = list(string)
+}
+
+variable "stripe_price_monthly" {
+  type        = string
+  description = "Stripe monthly Price ID."
+}
+
+variable "stripe_price_annual" {
+  type        = string
+  description = "Stripe annual Price ID."
 }

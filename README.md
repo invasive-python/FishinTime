@@ -4,6 +4,16 @@ Static files used by the page belong in `res/`. The Docker image copies this
 directory and FastAPI serves it under `/res`; for example,
 `res/mermaid-diagram.png` is available at `/res/mermaid-diagram.png`.
 
+## Frontend backend URL
+
+The frontend reads `window.FISHINTIME_API_BASE_URL` from `config.js` and uses it
+for all API requests. Leave it empty to use the current origin, which keeps the
+website's same-origin behavior. For a mobile app build, set it to the HTTPS
+origin serving the API (for example, `https://api.example.com`, without a path).
+Do not use the current HTTP-only load balancer URL for a released mobile app;
+configure HTTPS for the API first. This URL is public configuration, not a place
+to store API keys or other secrets.
+
 ## OpenAI agent and AWS Secrets Manager setup
 
 Install the project dependencies with `pip install -r requirements.txt`. Store

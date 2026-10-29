@@ -1,4 +1,5 @@
 import logging
+from billing.router import router as billing_router
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -36,6 +37,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(title="FishinTime Forecast API", lifespan=lifespan)
 app.include_router(forecast_router)
 app.include_router(location_router)
+app.include_router(billing_router)
 app.mount(
     "/res",
     StaticFiles(directory=Path(__file__).with_name("res")),

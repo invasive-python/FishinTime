@@ -6,7 +6,10 @@ botocore
 python-dotenv
 requests
 pandas
+PyJWT[crypto]>=2.10,<3
 openmeteo-requests
 requests-cache
 retry-requests
+stripe
 uvicorn
+

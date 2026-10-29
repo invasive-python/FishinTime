@@ -9,11 +9,50 @@ data "aws_availability_zones" "available" {
 data "aws_caller_identity" "current" {}
 
 locals {
-  name = var.project_name
+  name       = var.project_name
+  api_domain = "api.${var.domain_name}"
   common_tags = {
     Project   = "FishinTime"
     ManagedBy = "Terraform"
   }
+}
+
+resource "aws_route53_zone" "main" {
+  name = var.domain_name
+  tags = local.common_tags
+}
+
+resource "aws_acm_certificate" "api" {
+  domain_name       = local.api_domain
+  validation_method = "DNS"
+  tags              = local.common_tags
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_route53_record" "certificate_validation" {
+  for_each = {
+    for option in aws_acm_certificate.api.domain_validation_options :
+    option.domain_name => {
+      name   = option.resource_record_name
+      record = option.resource_record_value
+      type   = option.resource_record_type
+    }
+  }
+
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = aws_route53_zone.main.zone_id
+}
+
+resource "aws_acm_certificate_validation" "api" {
+  certificate_arn         = aws_acm_certificate.api.arn
+  validation_record_fqdns = [for record in aws_route53_record.certificate_validation : record.fqdn]
 }
 
 # Networking: two public subnets in separate availability zones.
@@ -21,7 +60,7 @@ resource "aws_vpc" "main" {
   cidr_block           = "10.40.0.0/16"
   enable_dns_support   = true
   enable_dns_hostnames = true
-  tags = merge(local.common_tags, { Name = "${local.name}-vpc" })
+  tags                 = merge(local.common_tags, { Name = "${local.name}-vpc" })
 }
 
 resource "aws_internet_gateway" "main" {
@@ -57,20 +96,29 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-# Security groups: public HTTP to ALB; only the ALB can reach the app container.
+# Security groups: public HTTP/HTTPS to ALB; only the ALB can reach the app container.
 resource "aws_security_group" "alb" {
   name        = "${local.name}-alb-sg"
-  description = "Allow HTTP traffic to the FishinTime load balancer"
+  description = "Allow HTTP and HTTPS traffic to the FishinTime load balancer"
   vpc_id      = aws_vpc.main.id
   tags        = merge(local.common_tags, { Name = "${local.name}-alb-sg" })
 }
 
 resource "aws_vpc_security_group_ingress_rule" "alb_http" {
   security_group_id = aws_security_group.alb.id
-  description       = "HTTP from allowed CIDR"
+  description       = "HTTP redirect from allowed CIDR"
   cidr_ipv4         = var.allowed_http_cidr
   from_port         = 80
   to_port           = 80
+  ip_protocol       = "tcp"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "alb_https" {
+  security_group_id = aws_security_group.alb.id
+  description       = "HTTPS from allowed CIDR"
+  cidr_ipv4         = var.allowed_https_cidr
+  from_port         = 443
+  to_port           = 443
   ip_protocol       = "tcp"
 }
 
@@ -223,10 +271,42 @@ resource "aws_lb_listener" "http" {
   port              = 80
   protocol          = "HTTP"
   default_action {
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+  tags = local.common_tags
+}
+
+resource "aws_lb_listener" "https" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = aws_acm_certificate.api.arn
+
+  default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.backend.arn
   }
-  tags = local.common_tags
+
+  depends_on = [aws_acm_certificate_validation.api]
+  tags       = local.common_tags
+}
+
+resource "aws_route53_record" "api" {
+  zone_id = aws_route53_zone.main.zone_id
+  name    = local.api_domain
+  type    = "A"
+
+  alias {
+    name                   = aws_lb.main.dns_name
+    zone_id                = aws_lb.main.zone_id
+    evaluate_target_health = true
+  }
 }
 
 resource "aws_ecs_task_definition" "backend" {
@@ -251,6 +331,14 @@ resource "aws_ecs_task_definition" "backend" {
       { name = "AWS_REGION", value = var.aws_region },
       { name = "AWS_DEFAULT_REGION", value = var.aws_region },
       { name = "AWS_SECRET_NAME", value = "FishinSecret" }
+      { name = "BILLING_TABLE_NAME", value = aws_dynamodb_table.billing.name },
+      { name = "COGNITO_REGION", value = var.aws_region },
+      { name = "COGNITO_USER_POOL_ID", value = aws_cognito_user_pool.users.id },
+      { name = "COGNITO_CLIENT_ID", value = aws_cognito_user_pool_client.website.id },
+      { name = "COGNITO_ISSUER", value = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.users.id}" },
+      { name = "APP_BASE_URL", value = "https://tidalfishintime.com" },
+      { name = "STRIPE_PRICE_MONTHLY", value = var.stripe_price_monthly },
+      { name = "STRIPE_PRICE_ANNUAL", value = var.stripe_price_annual }
     ]
     logConfiguration = {
       logDriver = "awslogs"
@@ -260,16 +348,26 @@ resource "aws_ecs_task_definition" "backend" {
         "awslogs-stream-prefix" = "ecs"
       }
     }
+    secrets = [
+      {
+        name      = "STRIPE_SECRET_KEY"
+        valueFrom = aws_secretsmanager_secret.stripe_secret_key.arn
+      },
+      {
+        name      = "STRIPE_WEBHOOK_SECRET"
+        valueFrom = aws_secretsmanager_secret.stripe_webhook_secret.arn
+      }
+    ]    
   }])
   tags = local.common_tags
 }
 
 resource "aws_ecs_service" "backend" {
-  name            = "${local.name}-backend-service"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.backend.arn
-  desired_count   = var.desired_count
-  launch_type     = "FARGATE"
+  name             = "${local.name}-backend-service"
+  cluster          = aws_ecs_cluster.main.id
+  task_definition  = aws_ecs_task_definition.backend.arn
+  desired_count    = var.desired_count
+  launch_type      = "FARGATE"
   platform_version = "LATEST"
 
   deployment_circuit_breaker {
@@ -293,6 +391,8 @@ resource "aws_ecs_service" "backend" {
     aws_lb_listener.http,
     aws_iam_role_policy_attachment.execution_managed,
     aws_iam_role_policy.task_read_secrets
+    aws_iam_role_policy.task_billing_table
+    aws_iam_role_policy.execution_read_stripe_secrets
   ]
 
   tags = local.common_tags

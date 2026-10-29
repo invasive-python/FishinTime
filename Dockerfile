@@ -8,6 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY api.py ./
 COPY index.html ./
+COPY config.js ./
 COPY res ./res
 COPY models ./models
 COPY routers ./routers

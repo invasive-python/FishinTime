@@ -11,7 +11,16 @@ output "ecr_repository_url" {
 }
 
 output "load_balancer_url" {
-  value = "http://${aws_lb.main.dns_name}"
+  value = "https://${local.api_domain}"
+}
+
+output "api_domain_name" {
+  value = local.api_domain
+}
+
+output "domain_name_servers" {
+  description = "Set these nameservers at the domain registrar before applying the ACM certificate."
+  value       = aws_route53_zone.main.name_servers
 }
 
 output "ecs_cluster_name" {
