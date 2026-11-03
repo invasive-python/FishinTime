@@ -330,15 +330,16 @@ resource "aws_ecs_task_definition" "backend" {
     environment = [
       { name = "AWS_REGION", value = var.aws_region },
       { name = "AWS_DEFAULT_REGION", value = var.aws_region },
-      { name = "AWS_SECRET_NAME", value = "FishinSecret" }
+      { name = "AWS_SECRET_NAME", value = "FishinSecret" },
       { name = "BILLING_TABLE_NAME", value = aws_dynamodb_table.billing.name },
       { name = "COGNITO_REGION", value = var.aws_region },
       { name = "COGNITO_USER_POOL_ID", value = aws_cognito_user_pool.users.id },
       { name = "COGNITO_CLIENT_ID", value = aws_cognito_user_pool_client.website.id },
       { name = "COGNITO_ISSUER", value = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.users.id}" },
-      { name = "APP_BASE_URL", value = "https://tidalfishintime.com" },
-      { name = "STRIPE_PRICE_MONTHLY", value = var.stripe_price_monthly },
-      { name = "STRIPE_PRICE_ANNUAL", value = var.stripe_price_annual }
+      { name = "COGNITO_LOGIN_DOMAIN", value = "https://${aws_cognito_user_pool_domain.website.domain}.auth.${var.aws_region}.amazoncognito.com" },
+      { name = "APP_BASE_URL", value = var.app_base_url },
+      { name = "STRIPE_MONTHLY_AMOUNT_CENTS", value = tostring(var.stripe_monthly_amount_cents) },
+      { name = "STRIPE_ANNUAL_AMOUNT_CENTS", value = tostring(var.stripe_annual_amount_cents) }
     ]
     logConfiguration = {
       logDriver = "awslogs"
@@ -348,16 +349,6 @@ resource "aws_ecs_task_definition" "backend" {
         "awslogs-stream-prefix" = "ecs"
       }
     }
-    secrets = [
-      {
-        name      = "STRIPE_SECRET_KEY"
-        valueFrom = aws_secretsmanager_secret.stripe_secret_key.arn
-      },
-      {
-        name      = "STRIPE_WEBHOOK_SECRET"
-        valueFrom = aws_secretsmanager_secret.stripe_webhook_secret.arn
-      }
-    ]    
   }])
   tags = local.common_tags
 }
@@ -390,9 +381,9 @@ resource "aws_ecs_service" "backend" {
   depends_on = [
     aws_lb_listener.http,
     aws_iam_role_policy_attachment.execution_managed,
-    aws_iam_role_policy.task_read_secrets
-    aws_iam_role_policy.task_billing_table
-    aws_iam_role_policy.execution_read_stripe_secrets
+    aws_iam_role_policy.task_read_secrets,
+    aws_iam_role_policy.task_billing_table,
+    aws_iam_role_policy.task_read_stripe_secrets,
   ]
 
   tags = local.common_tags

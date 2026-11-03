@@ -10,7 +10,7 @@
       "python": "${workspaceFolder}/.venv/bin/python",
       "noDebug": true,
       "env": {
-        "AWS_PROFILE": "fishintime",
+        "AWS_PROFILE": "fishintime-757",
         "AWS_REGION": "us-east-2"
       },
       "console": "integratedTerminal",
@@ -24,7 +24,7 @@
       "args": ["api:app", "--reload"],
       "python": "${workspaceFolder}/.venv/bin/python",
       "env": {
-        "AWS_PROFILE": "fishintime",
+        "AWS_PROFILE": "fishintime-757",
         "AWS_REGION": "us-east-2"
       },
       "console": "integratedTerminal",

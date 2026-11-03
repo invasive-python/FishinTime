@@ -78,13 +78,6 @@ resource "aws_cognito_user_pool_domain" "website" {
   user_pool_id = aws_cognito_user_pool.users.id
 }
 
-resource "aws_secretsmanager_secret" "stripe_secret_key" {
-  name                    = "FishinTime_Stripe_Secret_Key"
-  description             = "FishinTime Stripe API secret key"
-  recovery_window_in_days = 7
-  tags                    = local.common_tags
-}
-
 resource "aws_secretsmanager_secret" "stripe_webhook_secret" {
   name                    = "FishinTime_Stripe_Webhook_Secret"
   description             = "FishinTime Stripe webhook signing secret"
@@ -111,9 +104,9 @@ resource "aws_iam_role_policy" "task_billing_table" {
   })
 }
 
-resource "aws_iam_role_policy" "execution_read_stripe_secrets" {
+resource "aws_iam_role_policy" "task_read_stripe_secrets" {
   name = "${local.name}-read-stripe-secrets"
-  role = aws_iam_role.execution.id
+  role = aws_iam_role.task.id
 
   policy = jsonencode({
     Version = "2012-10-17"

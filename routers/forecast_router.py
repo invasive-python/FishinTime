@@ -1,15 +1,22 @@
 import json
 import logging
-import os
 import uuid
+from datetime import date as date_type
 from datetime import datetime
+from typing import Annotated, Any
 
-import boto3
 import requests
-from botocore.exceptions import BotoCoreError, ClientError
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Request,
+)
 from openai import OpenAI
 
+from billing.auth import get_optional_authenticated_user
+from billing.router import has_active_subscription
 from models.weather_schemas import EvaluationJobResponse, ForecastResponse
 from services import forecast_service
 
@@ -17,51 +24,16 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-class SecretsManagerError(RuntimeError):
-    """Raised when the application cannot retrieve its configured secret."""
-
-
-def get_secret(secret_name: str) -> str:
-    region_name = (
-        os.getenv("AWS_REGION")
-        or os.getenv("AWS_DEFAULT_REGION")
-        or "us-east-2"
-    )
-
-    try:
-        response = boto3.client(
-            "secretsmanager", region_name=region_name
-        ).get_secret_value(SecretId=secret_name)
-    except ClientError as exc:
-        error_code = exc.response.get("Error", {}).get("Code", "Unknown")
-        raise SecretsManagerError(
-            f"Could not retrieve secret '{secret_name}' from AWS Secrets Manager "
-            f"in region '{region_name}' (AWS error: {error_code})."
-        ) from exc
-    except BotoCoreError as exc:
-        raise SecretsManagerError(
-            f"Could not retrieve secret '{secret_name}' from AWS Secrets Manager "
-            f"in region '{region_name}' ({type(exc).__name__}). Check the AWS "
-            "credentials and configuration available to this process."
-        ) from exc
-
-    secret_string = response.get("SecretString")
-    if not isinstance(secret_string, str) or not secret_string.strip():
-        raise SecretsManagerError(
-            f"Secret '{secret_name}' must contain a non-empty SecretString."
-        )
-    return secret_string
-
-
 def is_today_or_future(date_string: str, date_format: str = "%Y-%m-%d") -> bool:
     try:
         input_date = datetime.strptime(date_string, date_format).date()
-        today = datetime.today().date()
-        
+        today = date_type.today()
+
         return input_date >= today
-        
+
     except ValueError:
         return False
+
 
 @router.get(
     "/forecast/get_forecast",
@@ -79,6 +51,9 @@ def get_forecast(
     city: str,
     state: str,
     date: str,
+    user: Annotated[
+        dict[str, Any] | None, Depends(get_optional_authenticated_user)
+    ],
 ) -> ForecastResponse:
     try:
         if not is_today_or_future(date):
@@ -91,16 +66,33 @@ def get_forecast(
                 detail=f"No forecast or NOAA tide station found for {city} on {date}.",
             )
 
-        evaluation_id = str(uuid.uuid4())
-        evaluation_jobs = getattr(request.app.state, "evaluation_jobs", None)
-        if evaluation_jobs is None:
-            evaluation_jobs = {}
-            request.app.state.evaluation_jobs = evaluation_jobs
-        evaluation_jobs[evaluation_id] = {"status": "pending"}
-        background_tasks.add_task(
-            get_evaluation, request, forecast, evaluation_id
-        )
-        forecast.evaluation_id = evaluation_id
+        is_subscriber = False
+        if user is not None:
+            try:
+                is_subscriber = has_active_subscription(str(user["id"]))
+            except HTTPException as exc:
+                if exc.status_code != 503:
+                    raise
+                logger.exception(
+                    "Could not verify subscription; returning free forecast data."
+                )
+
+        if is_subscriber:
+            evaluation_id = str(uuid.uuid4())
+            evaluation_jobs = getattr(request.app.state, "evaluation_jobs", None)
+            if evaluation_jobs is None:
+                evaluation_jobs = {}
+                request.app.state.evaluation_jobs = evaluation_jobs
+            evaluation_jobs[evaluation_id] = {
+                "status": "pending",
+                "user_id": str(user["id"]),
+            }
+            background_tasks.add_task(
+                get_evaluation, request, forecast, evaluation_id
+            )
+            forecast.evaluation_id = evaluation_id
+        else:
+            forecast.evaluation_id = None
 
         return forecast
 
@@ -119,13 +111,30 @@ def get_forecast(
     responses={404: {"description": "AI evaluation not found."}},
 )
 def get_evaluation_status(
-    evaluation_id: str, request: Request
+    evaluation_id: str,
+    request: Request,
+    user: Annotated[
+        dict[str, Any] | None, Depends(get_optional_authenticated_user)
+    ],
 ) -> EvaluationJobResponse:
     evaluation_jobs = getattr(request.app.state, "evaluation_jobs", {})
     job = evaluation_jobs.get(evaluation_id)
     if job is None:
         raise HTTPException(status_code=404, detail="AI evaluation not found.")
-    return EvaluationJobResponse(**job)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Sign-in required.")
+    if job.get("user_id") != str(user["id"]):
+        raise HTTPException(status_code=404, detail="AI evaluation not found.")
+    if not has_active_subscription(str(user["id"])):
+        raise HTTPException(
+            status_code=403,
+            detail="An active subscription is required for AI evaluations.",
+        )
+    return EvaluationJobResponse(
+        status=job["status"],
+        ai_evaluation=job.get("ai_evaluation"),
+        error=job.get("error"),
+    )
 
 
 def get_evaluation(
@@ -133,6 +142,13 @@ def get_evaluation(
 ) -> None:
     job = request.app.state.evaluation_jobs[evaluation_id]
     try:
+        if not has_active_subscription(job["user_id"]):
+            job.update(
+                status="failed",
+                error="An active subscription is required for AI evaluations.",
+            )
+            return
+
         api_key = request.app.state.openai_api_key
         secret = json.loads(api_key)["OPENAI_API_KEY"]
 

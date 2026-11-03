@@ -5,3 +5,4 @@ __pycache__/
 .pytest_cache/
 ai_docs/
 node_modules
+.cache.sqlite

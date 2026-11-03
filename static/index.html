@@ -17,61 +17,8 @@
         }
     </script>
     <title>Tidal Fishin' Time</title>
+    <link rel="stylesheet" href="/static/common.css">
     <style>
-        :root {
-            font-family: "Segoe UI", sans-serif;
-            font-synthesis: none;
-            text-rendering: optimizeLegibility;
-        }
-
-        body {
-            --page: #e8f4f2;
-            --surface: rgba(255, 255, 255, 0.9);
-            --ink: #173b42;
-            --muted: #56747a;
-            --accent: #087e83;
-            --accent-hover: #05666b;
-            --border: #c7deda;
-            --table-border: #b2cfcb;
-            --soft: #f1f8f6;
-            min-height: 100vh;
-            margin: 0;
-            padding: 48px 20px;
-            box-sizing: border-box;
-            color: var(--ink);
-            background-color: var(--page);
-            background-image:
-                radial-gradient(ellipse at 80% 0%, rgba(244, 190, 120, .42), transparent 35%),
-                linear-gradient(155deg, #f7fbf8 0%, #dcefeb 52%, #b5d9d9 100%);
-            transition: background-color .25s, color .25s;
-        }
-
-        .page-shell {
-            width: min(760px, 100%);
-            margin: 0 auto;
-        }
-
-        .masthead { margin-bottom: 30px; }
-        .eyebrow {
-            margin: 0 0 9px;
-            color: var(--accent);
-            font-size: .76rem;
-            font-weight: 800;
-            letter-spacing: .16em;
-            text-transform: uppercase;
-        }
-        h1 { margin: 0; font-size: clamp(2rem, 6vw, 3.4rem); letter-spacing: -.045em; }
-        .intro { max-width: 540px; margin: 12px 0 0; color: var(--muted); line-height: 1.6; }
-
-        .panel {
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            background: var(--surface);
-            box-shadow: 0 16px 45px rgba(15, 49, 57, .09);
-            backdrop-filter: blur(12px);
-            padding: clamp(22px, 5vw, 36px); 
-        }
-
         .panel h2 { margin: 0 0 7px; font-size: 1.35rem; }
         .panel-copy { margin: 0 0 24px; color: var(--muted); }
         .form-group { margin-bottom: 19px; }
@@ -301,13 +248,8 @@
 
         @media (max-width: 600px) {
             body {
-                padding: 24px 12px;
                 line-height: 1.5;
             }
-            .masthead { margin-bottom: 22px; }
-            .eyebrow { font-size: .72rem; }
-            .intro { margin-top: 10px; }
-            .panel { padding: 20px 16px; border-radius: 16px; }
             .panel-copy { line-height: 1.5; }
             label { font-size: 1rem; }
             select, input, .submit-button { min-height: 50px; font-size: 1rem; }
@@ -345,6 +287,7 @@
             <p class="eyebrow">Tidal Fishing Conditions</p>
             <h1>Find your fishing window.</h1>
             <p class="intro">Choose a shoreline and date to check the conditions before you head out.</p>
+            <a class="billing-link" href="/billing/subscribe">Unlock AI fishing recommendations</a>
         </header>
 
         <section class="panel" aria-labelledby="locationHeading">
@@ -373,7 +316,11 @@
                 <button class="submit-button" id="forecastSubmit" type="submit">Get Fishing Conditions</button>
             </form>
             <div id="forecastResult" aria-live="polite"></div>
-            <div id="evaluation" aria-live="polite"></div>
+            <div id="evaluation" aria-live="polite">
+                <h3>Your AI fishing guide says:</h3>
+                <p>AI fishing recommendations are available to active subscribers.</p>
+                <a href="/billing/subscribe">View subscription options</a>
+            </div>
         </section>
 
     </main>
@@ -393,8 +340,46 @@
         const evaluation = document.getElementById("evaluation");
         const DEFAULT_STATE = "FL";
         const DEFAULT_STATION = "Fort Lauderdale, Andrews Ave. Bridge";
+        const forecastStorageKey = "fishintime_last_forecast";
         let activeEvaluationRequest = 0;
         let evaluationProgressTimer = null;
+
+        function showSubscriberNotice() {
+            const heading = document.createElement("h3");
+            heading.textContent = "Your AI fishing guide says:";
+            const message = document.createElement("p");
+            message.textContent =
+                "AI fishing recommendations are available to active subscribers.";
+            const link = document.createElement("a");
+            link.href = "/billing/subscribe";
+            link.textContent = "View subscription options";
+            evaluation.replaceChildren(heading, message, link);
+        }
+
+        function saveForecastState(state) {
+            try {
+                sessionStorage.setItem(forecastStorageKey, JSON.stringify(state));
+            } catch (error) {
+                console.error("Unable to preserve the forecast for this session:", error);
+            }
+        }
+
+        function saveCompletedEvaluation(evaluationText) {
+            try {
+                const state = JSON.parse(sessionStorage.getItem(forecastStorageKey) || "null");
+                if (state) {
+                    state.aiEvaluation = evaluationText;
+                    saveForecastState(state);
+                }
+            } catch (error) {
+                console.error("Unable to preserve the AI evaluation for this session:", error);
+            }
+        }
+
+        function authorizationHeaders() {
+            const token = sessionStorage.getItem("fishintime_access_token");
+            return token ? { Authorization: `Bearer ${token}` } : {};
+        }
 
         function stopEvaluationProgress() {
             if (evaluationProgressTimer !== null) {
@@ -407,7 +392,8 @@
             while (requestId === activeEvaluationRequest) {
                 await new Promise(resolve => setTimeout(resolve, 1500));
                 const response = await fetch(
-                    apiUrl(`/forecast/evaluation/${encodeURIComponent(evaluationId)}`)
+                    apiUrl(`/forecast/evaluation/${encodeURIComponent(evaluationId)}`),
+                    { headers: authorizationHeaders() }
                 );
                 const result = await response.json();
                 if (!response.ok) {
@@ -417,6 +403,7 @@
 
                 if (result.status === "completed") {
                     stopEvaluationProgress();
+                    saveCompletedEvaluation(result.ai_evaluation || "");
                     evaluation.replaceChildren(
                         Object.assign(document.createElement("h3"), {
                             textContent: "Overall Recommendation",
@@ -1228,8 +1215,60 @@
                     stateSelect.value = DEFAULT_STATE;
                     await loadStations(DEFAULT_STATE, DEFAULT_STATION);
                 }
+                await restoreForecastState(states);
             } catch (error) {
                 console.error("Error fetching states:", error);
+            }
+        }
+
+        async function restoreForecastState(states) {
+            let savedState;
+            try {
+                savedState = JSON.parse(sessionStorage.getItem(forecastStorageKey) || "null");
+            } catch (error) {
+                console.error("Unable to restore the previous forecast:", error);
+                return;
+            }
+            if (
+                !savedState ||
+                !states.includes(savedState.state) ||
+                typeof savedState.city !== "string" ||
+                typeof savedState.date !== "string" ||
+                !savedState.result ||
+                typeof savedState.result !== "object"
+            ) {
+                return;
+            }
+
+            stateSelect.value = savedState.state;
+            await loadStations(savedState.state, savedState.city);
+            dateSelect.value = savedState.date;
+            forecastResult.replaceChildren(renderForecastTable(savedState.result));
+
+            if (typeof savedState.aiEvaluation === "string") {
+                evaluation.replaceChildren(
+                    Object.assign(document.createElement("h3"), {
+                        textContent: "Overall Recommendation",
+                    }),
+                    renderMarkdown(savedState.aiEvaluation)
+                );
+            } else if (savedState.result.evaluation_id) {
+                const requestId = ++activeEvaluationRequest;
+                evaluation.replaceChildren(
+                    Object.assign(document.createElement("h3"), {
+                        textContent: "Overall Recommendation",
+                    }),
+                    createEvaluationProgressMessage()
+                );
+                loadEvaluation(savedState.result.evaluation_id, requestId).catch(error => {
+                    if (requestId === activeEvaluationRequest) {
+                        stopEvaluationProgress();
+                        console.error("Error restoring AI evaluation:", error);
+                        evaluation.textContent = "Unable to load the AI evaluation.";
+                    }
+                });
+            } else {
+                showSubscriberNotice();
             }
         }
 
@@ -1275,18 +1314,100 @@
             await loadStations(event.target.value);
         });
 
+        function renderForecastTable(result) {
+            const labels = new Map([
+                ["city", "City"],
+                ["date", "Date"],
+                ["precipitation_probability", "Chance of Precipitation"],
+                ["start_time", "Precipitation Starting Time (local)"],
+                ["temp", "Temperature"],
+                ["wind_speed_max", "Wind Speed (Max)"],
+                ["wind_speed_min", "Wind Speed (Min)"],
+                ["wind_direction", "Wind Direction"],
+                ["moon_current_phase", "Current Moon Phase"],
+                ["moon_brightness", "Moon Brightness"],
+                ["predictions", "Tides"],
+                ["detailed_forecast", "Forecast"],
+                ["waves", "Waves"],
+                ["pressure", "Barometric Pressure"],
+            ]);
+            const entries = Object.entries(result).filter(
+                ([key]) =>
+                    key !== "ai_evaluation" &&
+                    key !== "evaluation_id" &&
+                    key !== "moon_brightness" &&
+                    key !== "moon_closest_phase" &&
+                    key !== "moon_closest_phase_date"
+            );
+            const details = document.createElement("table");
+
+            for (const [key, value] of entries) {
+                const row = document.createElement("tr");
+                const term = document.createElement("td");
+                term.setAttribute("style", "vertical-align: top;");
+                term.textContent = labels.get(key) || key;
+                row.append(term);
+
+                const definition = document.createElement("td");
+                if (key === "pressure") {
+                    definition.append(renderPressureIndicator(value));
+                } else if (key === "moon_current_phase") {
+                    definition.append(renderMoonPhase(value, result.moon_brightness));
+                } else if (key === "waves") {
+                    let waveRows = value;
+                    if (typeof waveRows === "string") {
+                        try {
+                            waveRows = JSON.parse(waveRows);
+                        } catch (error) {
+                            console.error("Unable to parse wave data:", error);
+                            waveRows = [];
+                        }
+                    }
+                    if (
+                        !Array.isArray(waveRows) &&
+                        waveRows !== null &&
+                        typeof waveRows === "object" &&
+                        Array.isArray(waveRows.data) &&
+                        Array.isArray(waveRows.columns)
+                    ) {
+                        waveRows = waveRows.data.map(values =>
+                            Object.fromEntries(
+                                waveRows.columns.map((column, index) => [
+                                    column,
+                                    values[index],
+                                ])
+                            )
+                        );
+                    }
+                    definition.append(renderWaveChart(waveRows, result.date));
+                } else if (key === "predictions" && Array.isArray(value)) {
+                    definition.append(renderTideChart(value, result.date));
+                } else {
+                    const displayValue =
+                        value !== null && typeof value === "object"
+                            ? JSON.stringify(value, null, 2)
+                            : String(value);
+                    const unit = {
+                        precipitation_probability: "%",
+                        temp: "°F",
+                        wind_speed_max: " MPH",
+                        wind_speed_min: " MPH",
+                    }[key] || "";
+                    definition.textContent = `${displayValue}${unit}`;
+                }
+                row.append(definition);
+                details.append(row);
+            }
+            return details;
+        }
+
         forecastForm.addEventListener("submit", async (event) => {
             event.preventDefault();
             stopEvaluationProgress();
             forecastSubmit.disabled = true;
             forecastResult.textContent = "Loading forecast...";
             const requestId = ++activeEvaluationRequest;
-            evaluation.replaceChildren(
-                Object.assign(document.createElement("h3"), {
-                    textContent: "Overall Recommendation",
-                }),
-                createEvaluationProgressMessage()
-            );
+            showSubscriberNotice();
 
             const params = new URLSearchParams({
                 city: citySelect.value,
@@ -1294,96 +1415,31 @@
                 date: dateSelect.value,
             });
 
-            // Create a Map
-            const labels = new Map([
-            ["city", "City"],
-            ["date", "Date"],
-            ["precipitation_probability", "Chance of Precipitation"],
-            ["start_time", "Precipitation Starting Time (local)"],
-            ["temp", "Temparature"],
-            ["wind_speed_max", "Wind Speed (Max)"],
-            ["wind_speed_min", "Wind Speed (Min)"],
-            ["wind_direction", "Wind Direction"],
-            ["moon_current_phase", "Current Moon Phase"],
-            ["moon_brightness", "Moon Brightness"],
-            ["predictions", "Tides"],
-            ["detailed_forecast", "Forecast"],
-            ["waves","Waves"],
-            ["pressure", "Barometric Pressure"],
-            ]);
-
             try {
                 const response = await fetch(
-                    apiUrl(`/forecast/get_forecast?${params.toString()}`)
+                    apiUrl(`/forecast/get_forecast?${params.toString()}`),
+                    { headers: authorizationHeaders() }
                 );
                 const result = await response.json();
                 if (!response.ok) {
                     throw new Error(result.detail || `Forecast request failed: ${response.status}`);
                 }
 
-                const entries = Object.entries(result).filter(
-                    ([key]) =>
-                        key !== "ai_evaluation" &&
-                        key !== "evaluation_id" &&
-                        key !== "moon_brightness" &&
-                        key !== "moon_closest_phase" &&
-                        key !== "moon_closest_phase_date"
-                );
-                const details = document.createElement("table");
-                for (const [key, value] of entries) {
-                    const row = document.createElement("tr");
-                    const term = document.createElement("td");
-                    term.setAttribute("style", "vertical-align: top;")
-                    term.textContent = labels.get(key);
-                    row.append(term)
-
-                    const definition = document.createElement("td");
-                    if (key === "pressure") {
-                        definition.append(renderPressureIndicator(value));
-                    } else if (key === "moon_current_phase") {
-                        definition.append(renderMoonPhase(value, result.moon_brightness));
-                    } else if (key === "waves") {
-                        let waveRows = value;
-                        if (typeof waveRows === "string") {
-                            try {
-                                waveRows = JSON.parse(waveRows);
-                            } catch (error) {
-                                console.error("Unable to parse wave data:", error);
-                                waveRows = [];
-                            }
-                        }
-                        if (
-                            !Array.isArray(waveRows) &&
-                            waveRows !== null &&
-                            typeof waveRows === "object" &&
-                            Array.isArray(waveRows.data) &&
-                            Array.isArray(waveRows.columns)
-                        ) {
-                            waveRows = waveRows.data.map(values =>
-                                Object.fromEntries(
-                                    waveRows.columns.map((column, index) => [
-                                        column,
-                                        values[index],
-                                    ])
-                                )
-                            );
-                        }
-                        definition.append(renderWaveChart(waveRows, result.date));
-                    } else if (key === "predictions" && Array.isArray(value)) {
-                        definition.append(renderTideChart(value, result.date));
-                    } else {
-                        definition.textContent =
-                            value !== null && typeof value === "object"
-                                ? JSON.stringify(value, null, 2)
-                                : String(value);
-                    }
-                    row.append(definition)
-
-                    details.append(row);
-                }
-
-                forecastResult.replaceChildren(details);
+                saveForecastState({
+                    state: stateSelect.value,
+                    city: citySelect.value,
+                    date: dateSelect.value,
+                    result,
+                    aiEvaluation: null,
+                });
+                forecastResult.replaceChildren(renderForecastTable(result));
                 if (result.evaluation_id) {
+                    evaluation.replaceChildren(
+                        Object.assign(document.createElement("h3"), {
+                            textContent: "Overall Recommendation",
+                        }),
+                        createEvaluationProgressMessage()
+                    );
                     loadEvaluation(result.evaluation_id, requestId).catch(error => {
                         if (requestId === activeEvaluationRequest) {
                             stopEvaluationProgress();
@@ -1393,7 +1449,7 @@
                     });
                 } else {
                     stopEvaluationProgress();
-                    evaluation.textContent = "AI evaluation was not started.";
+                    showSubscriberNotice();
                 }
 
             } catch (error) {

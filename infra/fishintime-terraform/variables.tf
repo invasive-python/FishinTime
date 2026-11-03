@@ -86,12 +86,30 @@ variable "cognito_logout_urls" {
   type        = list(string)
 }
 
-variable "stripe_price_monthly" {
-  type        = string
-  description = "Stripe monthly Price ID."
+variable "stripe_monthly_amount_cents" {
+  type        = number
+  description = "Monthly FishinTime subscription price in USD cents."
+  default     = 99
+
+  validation {
+    condition     = var.stripe_monthly_amount_cents > 0 && floor(var.stripe_monthly_amount_cents) == var.stripe_monthly_amount_cents
+    error_message = "The monthly subscription amount must be a positive whole number of cents."
+  }
 }
 
-variable "stripe_price_annual" {
+variable "stripe_annual_amount_cents" {
+  type        = number
+  description = "Annual FishinTime subscription price in USD cents."
+  default     = 999
+
+  validation {
+    condition     = var.stripe_annual_amount_cents > 0 && floor(var.stripe_annual_amount_cents) == var.stripe_annual_amount_cents
+    error_message = "The annual subscription amount must be a positive whole number of cents."
+  }
+}
+
+variable "app_base_url" {
   type        = string
-  description = "Stripe annual Price ID."
+  description = "Public HTTPS URL used for billing redirects and the Cognito callback, without a trailing slash."
+  default     = "https://api.tidalfishintime.com"
 }

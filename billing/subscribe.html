@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FishinTime AI Subscription</title>
+    <link rel="stylesheet" href="/static/common.css">
+    <script src="/static/config.js"></script>
+    <script src="/billing/client.js" defer></script>
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="masthead">
+        <p class="eyebrow">Subscription</p>
+        <h1>Unlock AI fishing recommendations</h1>
+        <p class="intro">Your local forecast, tides, waves, moon phase, and pressure information remain free. A subscription unlocks an overall AI-generated evaluation of 
+          whether it is a good day to fish, detailed conditions, the best times and target species.</p>
+      </header>
+      <section class="panel">
+        <a class="billing-link" href="/">Back to fishing conditions</a>
+        <p id="message" class="billing-message" role="status" aria-live="polite">Loading subscription options…</p>
+        <button id="signInButton" class="submit-button" type="button" hidden>Sign in</button>
+        <section id="plans" class="plans" aria-label="Subscription plans">
+          <div class="plan">
+            <div><strong>Monthly</strong><br><span id="monthlyPrice">$0.99 / month</span></div>
+            <button class="submit-button" type="button" data-plan="monthly">Choose monthly</button>
+          </div>
+          <div class="plan">
+            <div><strong>Annual</strong><br><span id="annualPrice">$9.99 / year</span></div>
+            <button class="submit-button" type="button" data-plan="annual">Choose annual</button>
+          </div>
+        </section>
+        <button id="portalButton" class="submit-button" type="button" hidden>Manage subscription</button>
+      </section>
+    </main>
+  </body>
+</html>

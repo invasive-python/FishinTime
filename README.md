@@ -1,8 +1,8 @@
 # fishin_time
 
-Static files used by the page belong in `res/`. The Docker image copies this
-directory and FastAPI serves it under `/res`; for example,
-`res/mermaid-diagram.png` is available at `/res/mermaid-diagram.png`.
+Static files used by the page belong in `static/`. The Docker image copies this
+directory and FastAPI serves it under `/static`; for example,
+`static/mermaid-diagram.png` is available at `/static/mermaid-diagram.png`.
 
 ## Frontend backend URL
 
@@ -47,3 +47,34 @@ the task's IAM role on AWS. It does not load the secret values from `.env`.
 Check the local credentials with `aws sts get-caller-identity
 --profile fishintime`. Do not commit AWS credentials or secret values; `.env`
 is excluded from Git.
+
+## Stripe subscriptions and AI recommendations
+
+The monthly and annual prices are Terraform variables measured in USD cents:
+`stripe_monthly_amount_cents` defaults to `99`, and
+`stripe_annual_amount_cents` defaults to `999`. For example, override either
+value in your Terraform variables file or with `-var` when applying Terraform.
+Checkout creates recurring Stripe prices from these amounts, so no Stripe
+Price IDs need to be created or copied into the application. Remove any older
+`stripe_price_monthly` / `stripe_price_annual` Price ID entries from
+`terraform.tfvars`; use the new `stripe_monthly_amount_cents` /
+`stripe_annual_amount_cents` values instead.
+
+Set the `FishinSecret_Stripe_API_Key` Secrets Manager secret to your Stripe secret
+API key. Configure a Stripe webhook at
+`https://api.tidalfishintime.com/api/billing/webhook` for
+`customer.subscription.created`, `customer.subscription.updated`, and
+`customer.subscription.deleted`, then store that endpoint's signing secret in
+`FishinTime_Stripe_Webhook_Secret`. The application reads the API key with
+`get_secret("_Key_")` at startup and retrieves the webhook
+signing secret from Secrets Manager when webhook requests arrive. The ECS task
+role needs access to both secrets and to the billing DynamoDB table; Terraform
+configures those permissions.
+
+The Cognito callback allow-list must contain the exact subscription page URL
+`${app_base_url}/billing/subscribe` (by default,
+`https://api.tidalfishintime.com/billing/subscribe`). The subscription page
+uses Cognito's public authorization-code flow with PKCE. Users can access
+forecast and environmental data without signing in; an active or trialing
+subscription is required only to start or retrieve an AI fishing evaluation.
+The checkout and billing-portal endpoints require a Cognito access token.

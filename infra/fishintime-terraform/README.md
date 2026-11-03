@@ -11,7 +11,16 @@ This Terraform project reconstructs the FishinTime infrastructure from the prior
 - ECR repository `fishintime-backend`
 - CloudWatch log group `/ecs/fishintime-backend`
 - Separate ECS execution and application task roles
-- Secrets Manager secrets `FishinSecret_OpenAI` and `FishinSecret_Agent_Id`
+- Secrets Manager secrets for OpenAI, Cognito billing, and Stripe
+- DynamoDB billing records used for Stripe customers and subscription entitlements
+
+The Stripe subscription prices are configurable with
+`stripe_monthly_amount_cents` (default `99`) and
+`stripe_annual_amount_cents` (default `999`). The application creates monthly
+and annual recurring prices directly at Stripe Checkout from these values.
+The Cognito callback URL list must include
+`${app_base_url}/billing/subscribe`; by default `app_base_url` is
+`https://api.tidalfishintime.com`.
 
 ## Before you start
 
@@ -55,7 +64,9 @@ terraform fmt -check
 terraform validate
 terraform apply -target=aws_ecr_repository.backend \
   -target=aws_secretsmanager_secret.openai \
-  -target=aws_secretsmanager_secret.agent_id
+  -target=aws_secretsmanager_secret.agent_id \
+  -target=aws_secretsmanager_secret.stripe_secret_key \
+  -target=aws_secretsmanager_secret.stripe_webhook_secret
 ```
 
 Terraform will warn that `-target` is for exceptional/partial operations; here it is used only to bootstrap the ECR repository and secret containers before the service is created. Use a normal full plan/apply for later changes.
@@ -111,6 +122,36 @@ The prompts do not echo what you type or put the values directly in shell
 history. The AWS CLI receives each value as a command-line argument, so avoid
 running this on a shared machine. AWS Secrets Manager stores the JSON object as
 the secret string; the application parses the expected field from it.
+
+Set the Stripe API and webhook signing secrets as plain text in their
+Secrets Manager entries. The API key is read at app startup with
+`get_secret("FishinSecret_Stripe_API")`; the webhook signing secret is loaded
+when Stripe sends a webhook. Configure Stripe to send
+`customer.subscription.created`, `customer.subscription.updated`, and
+`customer.subscription.deleted` to
+`https://api.<domain_name>/api/billing/webhook`.
+
+```bash
+read -rsp "Stripe API secret key: " STRIPE_API_SECRET
+printf '\n'
+aws secretsmanager put-secret-value \
+  --secret-id FishinSecret_Stripe_API_Key \
+  --secret-string "$STRIPE_API_SECRET" \
+  --region "$AWS_REGION"
+unset STRIPE_API_SECRET
+
+read -rsp "Stripe webhook signing secret: " STRIPE_WEBHOOK_SECRET
+printf '\n'
+aws secretsmanager put-secret-value \
+  --secret-id FishinTime_Stripe_Webhook_Secret \
+  --secret-string "$STRIPE_WEBHOOK_SECRET" \
+  --region "$AWS_REGION"
+unset STRIPE_WEBHOOK_SECRET
+```
+
+In your Terraform variables, set `cognito_callback_urls` to include the exact
+`app_base_url` plus `/billing/subscribe`, and configure the Stripe amounts in
+cents as needed. For example, `99` is $0.99 and `999` is $9.99.
 
 ## 5. Plan and create the full stack
 
