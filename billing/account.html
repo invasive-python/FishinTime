@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Your FishinTime Account</title>
+    <link rel="stylesheet" href="/static/common.css">
+    <script src="/static/config.js"></script>
+    <script src="/billing/client.js" defer></script>
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="masthead">
+        <p class="eyebrow">Your account</p>
+        <h1>Sign in and manage your account</h1>
+        <p class="intro">Sign in or create an account to subscribe and manage your FishinTime membership.</p>
+      </header>
+      <section class="panel" aria-label="Account management">
+        <a class="billing-link" href="/">Back to fishing conditions</a>
+        <p id="message" class="billing-message" role="status" aria-live="polite">Checking your account…</p>
+        <button id="signInButton" class="submit-button" type="button" hidden>Sign in or create account</button>
+
+        <section id="accountDetails" class="account-details" hidden>
+          <div class="account-section">
+            <h2>Sign-in email</h2>
+            <p id="accountEmail"></p>
+            <p class="account-help">Your email is also your sign-in name. Changing it updates the email address you use to sign in.</p>
+            <form id="emailForm" class="account-form">
+              <label for="newEmail">New email address</label>
+              <input id="newEmail" name="email" type="email" autocomplete="email" required>
+              <button class="submit-button" type="submit">Update email</button>
+            </form>
+            <form id="emailConfirmForm" class="account-form" hidden>
+              <label for="emailCode">Confirmation code</label>
+              <input id="emailCode" name="code" inputmode="numeric" autocomplete="one-time-code" required>
+              <button class="submit-button" type="submit">Confirm email</button>
+            </form>
+          </div>
+
+          <div class="account-section">
+            <h2>Change password</h2>
+            <form id="passwordForm" class="account-form">
+              <label for="currentPassword">Current password</label>
+              <input id="currentPassword" name="current_password" type="password" autocomplete="current-password" required>
+              <label for="newPassword">New password</label>
+              <input id="newPassword" name="new_password" type="password" autocomplete="new-password" minlength="12" required>
+              <p class="account-help">Use at least 12 characters, including an uppercase letter, a lowercase letter, and a number.</p>
+              <button class="submit-button" type="submit">Change password</button>
+            </form>
+          </div>
+
+          <div class="account-section">
+            <h2>Subscription</h2>
+            <p id="subscriptionStatus">Loading subscription status…</p>
+            <a class="submit-button" href="/billing/subscribe">View monthly and annual plans</a>
+            <button id="portalButton" class="submit-button" type="button" hidden>Manage subscription</button>
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

@@ -5,11 +5,18 @@
   const tokenStorageKey = "fishintime_access_token";
   const verifierStorageKey = "fishintime_pkce_verifier";
   const stateStorageKey = "fishintime_oauth_state";
+  const pendingPlanStorageKey = "fishintime_pending_plan";
   const message = document.getElementById("message");
   const plans = document.getElementById("plans");
-  const planButtons = plans.querySelectorAll("button[data-plan]");
+  const planButtons = plans?.querySelectorAll("button[data-plan]") || [];
   const signInButton = document.getElementById("signInButton");
   const portalButton = document.getElementById("portalButton");
+  const accountDetails = document.getElementById("accountDetails");
+  const emailForm = document.getElementById("emailForm");
+  const emailConfirmForm = document.getElementById("emailConfirmForm");
+  const passwordForm = document.getElementById("passwordForm");
+  const accountEmail = document.getElementById("accountEmail");
+  const subscriptionStatus = document.getElementById("subscriptionStatus");
 
   let config;
 
@@ -71,7 +78,7 @@
       response_type: "code",
       client_id: config.client_id,
       redirect_uri: config.redirect_uri,
-      scope: "openid email",
+      scope: "openid email profile aws.cognito.signin.user.admin",
       state,
       code_challenge: challenge,
       code_challenge_method: "S256",
@@ -109,13 +116,68 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan }),
     });
+    sessionStorage.removeItem(pendingPlanStorageKey);
     window.location.assign(result.checkout_url);
   }
 
   async function openPortal() {
-    message.textContent = "Opening billing management…";
+    message.textContent = "Opening subscription management…";
     const result = await requestApi("/api/billing/portal", { method: "POST" });
     window.location.assign(result.portal_url);
+  }
+
+  async function signOut() {
+    sessionStorage.removeItem(tokenStorageKey);
+    sessionStorage.removeItem(pendingPlanStorageKey);
+    const logout = new URL(`${config.login_domain}/logout`);
+    logout.search = new URLSearchParams({
+      client_id: config.client_id,
+      logout_uri: config.logout_uri,
+    });
+    window.location.assign(logout);
+  }
+
+  async function loadAccount() {
+    signInButton.hidden = false;
+    signInButton.textContent = "Sign out";
+    accountDetails.hidden = false;
+
+    const account = await requestApi("/api/billing/account");
+    accountEmail.textContent = account.email
+      ? `${account.email}${account.email_verified ? " (verified)" : " (verification required)"}`
+      : "No email address is associated with this account.";
+
+    try {
+      const status = await requestApi("/api/billing/status");
+      subscriptionStatus.textContent = status.active
+        ? `Active ${status.plan || ""} subscription`.trim()
+        : status.status === "inactive"
+          ? "No active subscription."
+          : `Subscription status: ${status.status}.`;
+      portalButton.hidden = status.status === "inactive";
+    } catch (error) {
+      subscriptionStatus.textContent = error.message;
+      portalButton.hidden = true;
+    }
+  }
+
+  async function initializePlans() {
+    const planData = await requestApi("/api/billing/plans");
+    document.getElementById("monthlyPrice").textContent =
+      formatPrice(planData.monthly.amount_cents, planData.monthly.interval);
+    document.getElementById("annualPrice").textContent =
+      formatPrice(planData.annual.amount_cents, planData.annual.interval);
+
+    const token = sessionStorage.getItem(tokenStorageKey);
+    if (token) {
+      const status = await requestApi("/api/billing/status");
+      if (status.active) {
+        message.textContent = "Your subscription is active. Manage it from your account.";
+        planButtons.forEach(button => { button.hidden = true; });
+        return;
+      }
+    }
+    message.textContent = "Choose a plan to subscribe.";
   }
 
   async function initialize() {
@@ -128,63 +190,68 @@
         );
       }
 
-      if (callback.searchParams.has("code")) {
+      const receivedCode = callback.searchParams.has("code");
+      if (receivedCode) {
         await exchangeAuthorizationCode(
           callback.searchParams.get("code"),
           callback.searchParams.get("state")
         );
       }
 
-      const planData = await requestApi("/api/billing/plans");
-      document.getElementById("monthlyPrice").textContent =
-        formatPrice(planData.monthly.amount_cents, planData.monthly.interval);
-      document.getElementById("annualPrice").textContent =
-        formatPrice(planData.annual.amount_cents, planData.annual.interval);
-
-      const token = sessionStorage.getItem(tokenStorageKey);
-      if (!token) {
-        message.textContent = "Choose a plan to sign in and subscribe.";
-        signInButton.hidden = false;
+      const pendingPlan = sessionStorage.getItem(pendingPlanStorageKey);
+      if (
+        receivedCode &&
+        (pendingPlan === "monthly" || pendingPlan === "annual")
+      ) {
+        await createCheckout(pendingPlan);
         return;
       }
 
-      const status = await requestApi("/api/billing/status");
-      signInButton.hidden = false;
-      signInButton.textContent = "Sign out";
-      if (status.active) {
-        message.textContent = "Your AI recommendation subscription is active.";
-        portalButton.hidden = false;
-        planButtons.forEach(button => { button.hidden = true; });
-      } else {
-        message.textContent = "Choose a plan to unlock AI fishing recommendations.";
+      if (plans) {
+        await initializePlans();
+      } else if (accountDetails) {
+        if (sessionStorage.getItem(tokenStorageKey)) {
+          await loadAccount();
+          message.textContent = "You are signed in.";
+        } else {
+          accountDetails.hidden = true;
+          signInButton.hidden = false;
+          signInButton.textContent = "Sign in or create account";
+          message.textContent = "Sign in or create an account to manage your subscription.";
+        }
       }
     } catch (error) {
       message.textContent = error.message;
-      signInButton.hidden = false;
-      signInButton.textContent = "Sign in";
+      if (signInButton) {
+        signInButton.hidden = false;
+        signInButton.textContent = sessionStorage.getItem(tokenStorageKey)
+          ? "Sign out"
+          : "Sign in or create account";
+      }
     }
   }
 
-  signInButton.addEventListener("click", async () => {
-    if (sessionStorage.getItem(tokenStorageKey)) {
-      sessionStorage.removeItem(tokenStorageKey);
-      window.location.reload();
-      return;
-    }
+  signInButton?.addEventListener("click", async () => {
     try {
-      await beginSignIn();
+      if (sessionStorage.getItem(tokenStorageKey)) {
+        await signOut();
+      } else {
+        await beginSignIn();
+      }
     } catch (error) {
       message.textContent = error.message;
     }
   });
 
-  plans.addEventListener("click", async event => {
+  plans?.addEventListener("click", async event => {
     const button = event.target.closest("button[data-plan]");
     if (!button) return;
     button.disabled = true;
     try {
-      if (!sessionStorage.getItem(tokenStorageKey)) {
-        message.textContent = "Sign in, then choose your plan to continue.";
+      const token = sessionStorage.getItem(tokenStorageKey);
+      if (!token) {
+        sessionStorage.setItem(pendingPlanStorageKey, button.dataset.plan);
+        message.textContent = "Sign in or create an account to continue to checkout.";
         await beginSignIn();
         return;
       }
@@ -195,7 +262,68 @@
     }
   });
 
-  portalButton.addEventListener("click", async () => {
+  emailForm?.addEventListener("submit", async event => {
+    event.preventDefault();
+    const email = new FormData(emailForm).get("email");
+    const button = emailForm.querySelector("button[type=submit]");
+    button.disabled = true;
+    try {
+      const result = await requestApi("/api/billing/account/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      message.textContent = result.message;
+      emailConfirmForm.hidden = false;
+    } catch (error) {
+      message.textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  emailConfirmForm?.addEventListener("submit", async event => {
+    event.preventDefault();
+    const code = new FormData(emailConfirmForm).get("code");
+    const button = emailConfirmForm.querySelector("button[type=submit]");
+    button.disabled = true;
+    try {
+      const result = await requestApi("/api/billing/account/email/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      message.textContent = result.message;
+      emailConfirmForm.hidden = true;
+      await loadAccount();
+    } catch (error) {
+      message.textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  passwordForm?.addEventListener("submit", async event => {
+    event.preventDefault();
+    const values = Object.fromEntries(new FormData(passwordForm));
+    const button = passwordForm.querySelector("button[type=submit]");
+    button.disabled = true;
+    try {
+      const result = await requestApi("/api/billing/account/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+      message.textContent = result.message;
+      passwordForm.reset();
+    } catch (error) {
+      message.textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  portalButton?.addEventListener("click", async () => {
     portalButton.disabled = true;
     try {
       await openPortal();

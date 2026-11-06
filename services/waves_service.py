@@ -56,6 +56,5 @@ def get_waves_data(
     hourly_data["wave_period"] = hourly_wave_period
 
     hourly_dataframe = pd.DataFrame(data = hourly_data)
-    print("\nHourly data\n", hourly_dataframe)
 
     return hourly_dataframe

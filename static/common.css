@@ -76,6 +76,7 @@ button[hidden] { display: none; }
 
 .billing-message { min-height: 1.5em; color: var(--muted); }
 .plans { display: grid; gap: 14px; margin: 24px 0; }
+.plans[hidden], #accountDetails[hidden], #emailConfirmForm[hidden] { display: none; }
 .plan {
     display: flex;
     align-items: center;
@@ -87,6 +88,29 @@ button[hidden] { display: none; }
     background: var(--soft);
 }
 #portalButton[hidden], #plans[hidden] { display: none; }
+
+.account-details { display: grid; gap: 26px; margin-top: 24px; }
+.account-section { padding-top: 22px; border-top: 1px solid var(--border); }
+.account-section h2 { margin: 0 0 10px; font-size: 1.2rem; }
+.account-help { color: var(--muted); font-size: .92rem; line-height: 1.5; }
+.account-form { display: grid; gap: 10px; margin-top: 16px; }
+.account-form label { font-size: .92rem; font-weight: 700; }
+.account-form input {
+    width: 100%;
+    min-height: 46px;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--ink);
+    background: var(--surface);
+    font: inherit;
+}
+.account-form input:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    outline-offset: 2px;
+}
+.account-form .submit-button { justify-self: start; }
 
 @media (max-width: 600px) {
     body { padding: 24px 12px; }

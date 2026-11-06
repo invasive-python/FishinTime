@@ -17,11 +17,10 @@ to store API keys or other secrets.
 ## OpenAI agent and AWS Secrets Manager setup
 
 Install the project dependencies with `pip install -r requirements.txt`. Store
-the OpenAI API key as the plain-text secret value of the
-`FishinSecret_OpenAI` secret in AWS Secrets Manager. The app reads that
-secret's `SecretString` directly; it does not expect JSON. The AWS region
-defaults to `us-east-2` and can be overridden with `AWS_REGION`. The app also
-reads the agent ID from the plain-text `FishinSecret_Agent_Id` secret.
+the OpenAI API key as JSON (`{"OPENAI_API_KEY":"..."}`) in
+`FishinSecret_OpenAI` and the agent ID as JSON (`{"AGENT_ID":"..."}`) in
+`FishinSecret_Agent_Id`. The AWS region defaults to `us-east-2` and can be
+overridden with `AWS_REGION`.
 
 The application reads the secret once during FastAPI startup and keeps it in
 memory for that process. If AWS Secrets Manager cannot return a valid secret,
@@ -30,22 +29,32 @@ redeploy the app after rotating the secret so the new value is loaded.
 
 When running on AWS, grant the application's IAM role
 `secretsmanager:GetSecretValue` for this secret. For local development,
-configure an AWS CLI profile with access to both secrets. In the AWS console,
-create an IAM principal for local development (do not create access keys for
-the root account), grant it `secretsmanager:GetSecretValue` for the two
-application secrets, and create an access key. Use least-privilege permissions;
-the resource ARNs are listed in `fishintime-task-secrets-policy.json`.
+configure the `fishintime-757` AWS CLI profile with access to the application
+secrets. Use a non-root IAM principal with least-privilege permissions;
+the resource ARNs are listed in
+`infra/iam/fishintime-task-secrets-policy.json`.
 
 ```sh
-aws configure --profile fishintime
-AWS_PROFILE=fishintime AWS_REGION=us-east-2 uvicorn api:app --reload
+aws configure --profile fishintime-757  # only if this profile is not configured
+set -a
+. ./.env
+set +a
+./.venv/bin/python -m uvicorn api:app --reload
+```
+
+Verify the profile points to account `757266935832` before running Terraform or
+the app:
+
+```sh
+aws sts get-caller-identity --profile fishintime-757
 ```
 
 The application calls Secrets Manager directly in both local development and
-AWS deployments. boto3 uses the configured AWS profile/credentials locally and
-the task's IAM role on AWS. It does not load the secret values from `.env`.
+AWS deployments. boto3 uses the `fishintime-757` profile locally and
+the task's IAM role on AWS. `.env` supplies local region and Cognito/billing
+configuration, but never stores secret values.
 Check the local credentials with `aws sts get-caller-identity
---profile fishintime`. Do not commit AWS credentials or secret values; `.env`
+--profile fishintime-757`. Do not commit AWS credentials or secret values; `.env`
 is excluded from Git.
 
 ## Stripe subscriptions and AI recommendations
@@ -60,21 +69,26 @@ Price IDs need to be created or copied into the application. Remove any older
 `terraform.tfvars`; use the new `stripe_monthly_amount_cents` /
 `stripe_annual_amount_cents` values instead.
 
-Set the `FishinSecret_Stripe_API_Key` Secrets Manager secret to your Stripe secret
-API key. Configure a Stripe webhook at
+The existing `FishinSecret_Stripe_API_Key` secret must contain your Stripe
+test-mode secret API key. Configure a Stripe test-mode webhook at
 `https://api.tidalfishintime.com/api/billing/webhook` for
 `customer.subscription.created`, `customer.subscription.updated`, and
 `customer.subscription.deleted`, then store that endpoint's signing secret in
 `FishinTime_Stripe_Webhook_Secret`. The application reads the API key with
-`get_secret("_Key_")` at startup and retrieves the webhook
+`get_secret("FishinSecret_Stripe_API_Key")` at startup and retrieves the webhook
 signing secret from Secrets Manager when webhook requests arrive. The ECS task
 role needs access to both secrets and to the billing DynamoDB table; Terraform
 configures those permissions.
 
-The Cognito callback allow-list must contain the exact subscription page URL
-`${app_base_url}/billing/subscribe` (by default,
-`https://api.tidalfishintime.com/billing/subscribe`). The subscription page
-uses Cognito's public authorization-code flow with PKCE. Users can access
-forecast and environmental data without signing in; an active or trialing
-subscription is required only to start or retrieve an AI fishing evaluation.
-The checkout and billing-portal endpoints require a Cognito access token.
+The Cognito callback and logout allow-lists must contain the exact account page
+URL `${app_base_url}/billing/account` (by default,
+`https://api.tidalfishintime.com/billing/account`). The plans are shown at
+`/billing/subscribe`; sign-in and account self-service are at `/billing/account`.
+The account page supports email changes with confirmation, password changes,
+and subscription management through the Stripe billing portal. With email as
+the user-pool sign-in attribute, changing the email also changes the address
+used to sign in. The subscription page uses Cognito's authorization-code flow
+with PKCE. Users can access forecast and environmental data without signing in;
+an active or trialing subscription is required only for AI fishing evaluations.
+Stripe API and webhook secrets are read from Secrets Manager, and subscription
+access is granted only after Stripe webhook events update the billing table.

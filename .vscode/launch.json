@@ -8,7 +8,7 @@
       "module": "uvicorn",
       "args": ["api:app", "--reload"],
       "python": "${workspaceFolder}/.venv/bin/python",
-      "noDebug": true,
+      "envFile": "${workspaceFolder}/.env",
       "env": {
         "AWS_PROFILE": "fishintime-757",
         "AWS_REGION": "us-east-2"
@@ -23,6 +23,7 @@
       "module": "uvicorn",
       "args": ["api:app", "--reload"],
       "python": "${workspaceFolder}/.venv/bin/python",
+      "envFile": "${workspaceFolder}/.env",
       "env": {
         "AWS_PROFILE": "fishintime-757",
         "AWS_REGION": "us-east-2"

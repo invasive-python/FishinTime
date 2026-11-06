@@ -29,6 +29,7 @@ class ForecastRouteTests(unittest.TestCase):
         with TestClient(app) as client:
             root = client.get("/")
             page = client.get("/billing/subscribe")
+            account_page = client.get("/billing/account")
             client_script = client.get("/billing/client.js")
             config = client.get("/static/config.js")
             stylesheet = client.get("/static/common.css")
@@ -41,6 +42,9 @@ class ForecastRouteTests(unittest.TestCase):
         self.assertIn("Unlock AI fishing recommendations", page.text)
         self.assertIn('data-plan="monthly">Choose monthly</button>', page.text)
         self.assertIn('data-plan="annual">Choose annual</button>', page.text)
+        self.assertEqual(account_page.status_code, 200)
+        self.assertIn("Sign in and manage your account", account_page.text)
+        self.assertIn("Change password", account_page.text)
         self.assertEqual(client_script.status_code, 200)
         self.assertIn("oauth2/authorize", client_script.text)
         self.assertEqual(config.status_code, 200)

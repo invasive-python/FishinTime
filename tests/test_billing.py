@@ -7,12 +7,19 @@ from fastapi import HTTPException
 from starlette.requests import Request
 
 from billing.router import (
+    ChangePasswordRequest,
     CheckoutRequest,
+    ConfirmEmailRequest,
     _store_subscription_event,
+    change_account_password,
     create_checkout,
+    get_account_profile,
     get_billing_config,
     get_plans,
     handle_stripe_webhook,
+    update_account_email,
+    verify_account_email,
+    UpdateEmailRequest,
 )
 
 
@@ -46,6 +53,7 @@ class BillingRouteTests(unittest.TestCase):
             {
                 "COGNITO_LOGIN_DOMAIN": "https://fishin.auth.us-east-2.amazoncognito.com/",
                 "COGNITO_CLIENT_ID": "public-client-id",
+                "COGNITO_REGION": "us-east-2",
                 "APP_BASE_URL": "https://api.example.com/",
             },
             clear=True,
@@ -57,8 +65,82 @@ class BillingRouteTests(unittest.TestCase):
             {
                 "login_domain": "https://fishin.auth.us-east-2.amazoncognito.com",
                 "client_id": "public-client-id",
-                "redirect_uri": "https://api.example.com/billing/subscribe",
+                "redirect_uri": "https://api.example.com/billing/account",
+                "logout_uri": "https://api.example.com/billing/account",
             },
+        )
+
+    @patch("billing.router.boto3.client")
+    def test_account_profile_returns_cognito_email(self, cognito_client):
+        cognito_client.return_value.get_user.return_value = {
+            "Username": "angler",
+            "UserAttributes": [
+                {"Name": "email", "Value": "angler@example.com"},
+                {"Name": "email_verified", "Value": "true"},
+            ],
+        }
+
+        result = get_account_profile(
+            user={"id": "user-123"},
+            credentials=Mock(credentials="access-token"),
+        )
+
+        self.assertEqual(
+            result,
+            {
+                "username": "angler",
+                "email": "angler@example.com",
+                "email_verified": True,
+            },
+        )
+        cognito_client.assert_called_once_with(
+            "cognito-idp", region_name="us-east-2"
+        )
+
+    @patch("billing.router.boto3.client")
+    def test_account_email_update_and_verification_use_access_token(
+        self, cognito_client
+    ):
+        credentials = Mock(credentials="access-token")
+
+        result = update_account_email(
+            UpdateEmailRequest(email="new@example.com"),
+            user={"id": "user-123"},
+            credentials=credentials,
+        )
+        self.assertIn("confirmation code", result["message"])
+        cognito_client.return_value.update_user_attributes.assert_called_once_with(
+            AccessToken="access-token",
+            UserAttributes=[{"Name": "email", "Value": "new@example.com"}],
+        )
+
+        verify_account_email(
+            ConfirmEmailRequest(code="123456"),
+            user={"id": "user-123"},
+            credentials=credentials,
+        )
+        cognito_client.return_value.verify_user_attribute.assert_called_once_with(
+            AccessToken="access-token",
+            AttributeName="email",
+            Code="123456",
+        )
+
+    @patch("billing.router.boto3.client")
+    def test_account_password_change_uses_access_token(self, cognito_client):
+        result = change_account_password(
+            ChangePasswordRequest(
+                current_password="OldPassword123",
+                new_password="NewPassword123",
+            ),
+            user={"id": "user-123"},
+            credentials=Mock(credentials="access-token"),
+        )
+
+        self.assertIn("password has been changed", result["message"])
+        cognito_client.return_value.change_password.assert_called_once_with(
+            AccessToken="access-token",
+            PreviousPassword="OldPassword123",
+            ProposedPassword="NewPassword123",
         )
 
     @patch("billing.router.stripe.checkout.Session.create")

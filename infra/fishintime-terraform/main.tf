@@ -1,5 +1,7 @@
 provider "aws" {
-  region = var.aws_region
+  region              = var.aws_region
+  profile             = "fishintime-757"
+  allowed_account_ids = ["757266935832"]
 }
 
 data "aws_availability_zones" "available" {
@@ -32,21 +34,20 @@ resource "aws_acm_certificate" "api" {
   }
 }
 
+data "aws_acm_certificate" "root_domain" {
+  domain      = var.domain_name
+  statuses    = ["ISSUED"]
+  most_recent = true
+}
+
 resource "aws_route53_record" "certificate_validation" {
-  for_each = {
-    for option in aws_acm_certificate.api.domain_validation_options :
-    option.domain_name => {
-      name   = option.resource_record_name
-      record = option.resource_record_value
-      type   = option.resource_record_type
-    }
-  }
+  for_each = toset([local.api_domain])
 
   allow_overwrite = true
-  name            = each.value.name
-  records         = [each.value.record]
+  name            = one(aws_acm_certificate.api.domain_validation_options).resource_record_name
+  records         = [one(aws_acm_certificate.api.domain_validation_options).resource_record_value]
   ttl             = 60
-  type            = each.value.type
+  type            = one(aws_acm_certificate.api.domain_validation_options).resource_record_type
   zone_id         = aws_route53_zone.main.zone_id
 }
 
@@ -99,14 +100,14 @@ resource "aws_route_table_association" "public" {
 # Security groups: public HTTP/HTTPS to ALB; only the ALB can reach the app container.
 resource "aws_security_group" "alb" {
   name        = "${local.name}-alb-sg"
-  description = "Allow HTTP and HTTPS traffic to the FishinTime load balancer"
+  description = "Allow HTTP traffic to the FishinTime load balancer"
   vpc_id      = aws_vpc.main.id
   tags        = merge(local.common_tags, { Name = "${local.name}-alb-sg" })
 }
 
 resource "aws_vpc_security_group_ingress_rule" "alb_http" {
   security_group_id = aws_security_group.alb.id
-  description       = "HTTP redirect from allowed CIDR"
+  description       = "HTTP from allowed CIDR"
   cidr_ipv4         = var.allowed_http_cidr
   from_port         = 80
   to_port           = 80
@@ -285,16 +286,22 @@ resource "aws_lb_listener" "https" {
   load_balancer_arn = aws_lb.main.arn
   port              = 443
   protocol          = "HTTPS"
-  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
-  certificate_arn   = aws_acm_certificate.api.arn
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-Res-PQ-2025-09"
+  certificate_arn   = data.aws_acm_certificate.root_domain.arn
 
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.backend.arn
   }
 
+  tags = local.common_tags
+}
+
+resource "aws_lb_listener_certificate" "api" {
+  listener_arn    = aws_lb_listener.https.arn
+  certificate_arn = aws_acm_certificate.api.arn
+
   depends_on = [aws_acm_certificate_validation.api]
-  tags       = local.common_tags
 }
 
 resource "aws_route53_record" "api" {

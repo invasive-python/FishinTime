@@ -18,19 +18,19 @@ The Stripe subscription prices are configurable with
 `stripe_monthly_amount_cents` (default `99`) and
 `stripe_annual_amount_cents` (default `999`). The application creates monthly
 and annual recurring prices directly at Stripe Checkout from these values.
-The Cognito callback URL list must include
-`${app_base_url}/billing/subscribe`; by default `app_base_url` is
+The Cognito callback and logout URL lists must include
+`${app_base_url}/billing/account`; by default `app_base_url` is
 `https://api.tidalfishintime.com`.
 
 ## Before you start
 
 1. This creates resources in the AWS account selected by your CLI credentials. Verify the account first.
-2. The secret resources are created without values. Add the values outside Terraform so the secret contents are not embedded in configuration/state.
-3. The app code in the prior chats calls `get_secret("FishinSecret_OpenAI")` and `get_secret("FishinSecret_Agent_Id")`; check your current helper to confirm whether it expects raw strings or JSON.
+2. The OpenAI, agent ID, and Stripe webhook secret containers are created without values. Add values outside Terraform so secrets are not embedded in configuration or state.
+3. OpenAI and agent ID secret values are JSON objects with `OPENAI_API_KEY` and `AGENT_ID` fields. The existing Stripe API secret is a plain-text Stripe test-mode key.
 4. The default HTTPS configuration creates a public Route 53 hosted zone for `tidalfishintime.com` (about $0.50/month). The registered domain must delegate DNS to that hosted zone's name servers before ACM can validate the certificate.
 5. Fargate tasks receive public IPs so they can call OpenAI, NOAA, and USNO without a NAT gateway. The task security group only allows inbound app traffic from the ALB.
 6. If a secret name is pending deletion from a prior attempt, AWS may prevent immediate reuse. Restore it or wait until its recovery window expires.
-7. The old account had Organizations policy complications. If the new account belongs to an organization, check its service control policies allow these resources/actions.
+7. Check that the selected account's organization policies allow these resources and actions.
 
 ## 1. Verify CLI identity and set region
 
@@ -47,12 +47,14 @@ If this prints `terraform: command not found`, Terraform is not installed or
 its executable directory is not on your `PATH`.
 
 ```bash
-aws sts get-caller-identity
+aws sts get-caller-identity --profile fishintime-757
+export AWS_PROFILE=fishintime-757
 export AWS_REGION=us-east-2
 export AWS_DEFAULT_REGION=us-east-2
 ```
 
-Do not proceed until the account ID shown by `get-caller-identity` is the account you intend to use.
+Do not proceed unless the account ID is `757266935832`. The Terraform AWS
+provider is pinned to this profile and account as an additional safety check.
 
 ## 2. Initialize Terraform and create bootstrap resources
 
@@ -65,7 +67,6 @@ terraform validate
 terraform apply -target=aws_ecr_repository.backend \
   -target=aws_secretsmanager_secret.openai \
   -target=aws_secretsmanager_secret.agent_id \
-  -target=aws_secretsmanager_secret.stripe_secret_key \
   -target=aws_secretsmanager_secret.stripe_webhook_secret
 ```
 
@@ -123,23 +124,19 @@ history. The AWS CLI receives each value as a command-line argument, so avoid
 running this on a shared machine. AWS Secrets Manager stores the JSON object as
 the secret string; the application parses the expected field from it.
 
-Set the Stripe API and webhook signing secrets as plain text in their
-Secrets Manager entries. The API key is read at app startup with
-`get_secret("FishinSecret_Stripe_API")`; the webhook signing secret is loaded
-when Stripe sends a webhook. Configure Stripe to send
+The Stripe API secret already exists in this account. Terraform reads its ARN
+without managing or replacing the key. Confirm it contains the Stripe test-mode
+secret key. Terraform creates the webhook secret container; populate it with
+the test-mode endpoint's `whsec_...` signing secret.
+
+The API key is read at app startup with
+`get_secret("FishinSecret_Stripe_API_Key")`; the webhook signing secret is loaded
+when Stripe sends a webhook. Configure Stripe in test mode to send
 `customer.subscription.created`, `customer.subscription.updated`, and
 `customer.subscription.deleted` to
 `https://api.<domain_name>/api/billing/webhook`.
 
 ```bash
-read -rsp "Stripe API secret key: " STRIPE_API_SECRET
-printf '\n'
-aws secretsmanager put-secret-value \
-  --secret-id FishinSecret_Stripe_API_Key \
-  --secret-string "$STRIPE_API_SECRET" \
-  --region "$AWS_REGION"
-unset STRIPE_API_SECRET
-
 read -rsp "Stripe webhook signing secret: " STRIPE_WEBHOOK_SECRET
 printf '\n'
 aws secretsmanager put-secret-value \
@@ -149,19 +146,21 @@ aws secretsmanager put-secret-value \
 unset STRIPE_WEBHOOK_SECRET
 ```
 
-In your Terraform variables, set `cognito_callback_urls` to include the exact
-`app_base_url` plus `/billing/subscribe`, and configure the Stripe amounts in
-cents as needed. For example, `99` is $0.99 and `999` is $9.99.
+In your Terraform variables, set both `cognito_callback_urls` and
+`cognito_logout_urls` to include the exact `app_base_url` plus
+`/billing/account`. For local development, also include
+`http://localhost:8000/billing/account` in both lists. Configure the Stripe
+amounts in cents as needed. For example, `99` is $0.99 and `999` is $9.99.
 
 ## 5. Plan and create the full stack
 
-Confirm that the AWS CLI credentials select the account containing the existing
-FishinTime deployment. The default API hostname is
+Confirm that the AWS CLI profile `fishintime-757` selects account
+`757266935832`. The default API hostname is
 `api.tidalfishintime.com`; override `domain_name` if your registered domain
 differs.
 
 ```bash
-aws sts get-caller-identity
+aws sts get-caller-identity --profile fishintime-757
 terraform apply -target=aws_route53_zone.main
 terraform output -json domain_name_servers
 ```
@@ -202,6 +201,23 @@ aws logs tail /ecs/fishintime-backend --follow --region "$AWS_REGION"
 The `load_balancer_url` output is the HTTPS API URL. Configure mobile frontend
 builds to use that origin in `config.js`. The HTTP listener redirects to HTTPS;
 clients should use the HTTPS URL directly.
+
+After applying, copy the Cognito and DynamoDB outputs into the ignored
+workspace `.env` file for local development:
+
+```bash
+terraform output -raw cognito_user_pool_id
+terraform output -raw cognito_client_id
+terraform output -raw cognito_issuer
+terraform output -raw cognito_login_domain
+terraform output -raw billing_table_name
+```
+
+Set those values as `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_ID`,
+`COGNITO_ISSUER`, `COGNITO_LOGIN_DOMAIN`, and `BILLING_TABLE_NAME`. Keep
+`APP_BASE_URL=http://localhost:8000` for local runs; the VS Code launch
+configuration loads `.env`. For deployed tasks, Terraform sets the public
+`app_base_url` and resource outputs directly.
 
 ## What this template reconstructs—and what it cannot know
 

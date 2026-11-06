@@ -65,6 +65,13 @@ def subscribe_page() -> FileResponse:
     )
 
 
+@app.get("/billing/account", include_in_schema=False)
+def billing_account_page() -> FileResponse:
+    return FileResponse(
+        Path(__file__).with_name("billing") / "account.html"
+    )
+
+
 @app.get("/billing/client.js", include_in_schema=False)
 def billing_client() -> FileResponse:
     return FileResponse(Path(__file__).with_name("billing") / "client.js")

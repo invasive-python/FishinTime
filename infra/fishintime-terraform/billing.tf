@@ -40,6 +40,10 @@ resource "aws_cognito_user_pool" "users" {
     temporary_password_validity_days = 7
   }
 
+  admin_create_user_config {
+    allow_admin_create_user_only = false
+  }
+
   tags = local.common_tags
 }
 
@@ -51,8 +55,13 @@ resource "aws_cognito_user_pool_client" "website" {
 
   allowed_oauth_flows_user_pool_client = true
   allowed_oauth_flows                  = ["code"]
-  allowed_oauth_scopes                 = ["openid", "email", "profile"]
-  supported_identity_providers         = ["COGNITO"]
+  allowed_oauth_scopes = [
+    "openid",
+    "email",
+    "profile",
+    "aws.cognito.signin.user.admin"
+  ]
+  supported_identity_providers = ["COGNITO"]
 
   callback_urls = var.cognito_callback_urls
   logout_urls   = var.cognito_logout_urls
@@ -76,6 +85,10 @@ resource "aws_cognito_user_pool_client" "website" {
 resource "aws_cognito_user_pool_domain" "website" {
   domain       = var.cognito_domain_prefix
   user_pool_id = aws_cognito_user_pool.users.id
+}
+
+data "aws_secretsmanager_secret" "stripe_secret_key" {
+  name = "FishinSecret_Stripe_API_Key"
 }
 
 resource "aws_secretsmanager_secret" "stripe_webhook_secret" {
@@ -114,7 +127,7 @@ resource "aws_iam_role_policy" "task_read_stripe_secrets" {
       Effect = "Allow"
       Action = ["secretsmanager:GetSecretValue"]
       Resource = [
-        aws_secretsmanager_secret.stripe_secret_key.arn,
+        data.aws_secretsmanager_secret.stripe_secret_key.arn,
         aws_secretsmanager_secret.stripe_webhook_secret.arn
       ]
     }]
