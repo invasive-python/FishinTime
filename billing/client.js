@@ -6,6 +6,7 @@
   const verifierStorageKey = "fishintime_pkce_verifier";
   const stateStorageKey = "fishintime_oauth_state";
   const pendingPlanStorageKey = "fishintime_pending_plan";
+  const oauthStateRetryStorageKey = "fishintime_oauth_state_retry";
   const message = document.getElementById("message");
   const plans = document.getElementById("plans");
   const planButtons = plans?.querySelectorAll("button[data-plan]") || [];
@@ -19,6 +20,51 @@
   const subscriptionStatus = document.getElementById("subscriptionStatus");
 
   let config;
+  planButtons.forEach(button => { button.disabled = true; });
+
+  function getAccessToken() {
+    const token = localStorage.getItem(tokenStorageKey);
+    if (token) return token;
+
+    const legacyToken = sessionStorage.getItem(tokenStorageKey);
+    if (legacyToken) {
+      localStorage.setItem(tokenStorageKey, legacyToken);
+      sessionStorage.removeItem(tokenStorageKey);
+    }
+    return legacyToken;
+  }
+
+  function clearAccessToken() {
+    localStorage.removeItem(tokenStorageKey);
+    sessionStorage.removeItem(tokenStorageKey);
+  }
+
+  function getOAuthValue(key) {
+    const value = sessionStorage.getItem(key);
+    if (value) return value;
+
+    const legacyValue = localStorage.getItem(key);
+    if (legacyValue) {
+      sessionStorage.setItem(key, legacyValue);
+      localStorage.removeItem(key);
+    }
+    return legacyValue;
+  }
+
+  function clearOAuthValues() {
+    for (const key of [stateStorageKey, verifierStorageKey]) {
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    }
+  }
+
+  function getCanonicalUrl(url) {
+    const canonicalUrl = new URL(config.redirect_uri);
+    canonicalUrl.pathname = url.pathname;
+    canonicalUrl.search = url.search;
+    canonicalUrl.hash = url.hash;
+    return canonicalUrl;
+  }
 
   function base64UrlEncode(bytes) {
     let binary = "";
@@ -33,10 +79,14 @@
   }
 
   async function exchangeAuthorizationCode(code, returnedState) {
-    const expectedState = sessionStorage.getItem(stateStorageKey);
-    const verifier = sessionStorage.getItem(verifierStorageKey);
+    const expectedState = getOAuthValue(stateStorageKey);
+    const verifier = getOAuthValue(verifierStorageKey);
     if (!expectedState || returnedState !== expectedState || !verifier) {
-      throw new Error("The sign-in response could not be verified. Please sign in again.");
+      const error = new Error(
+        "The sign-in response could not be verified. Start sign-in from the configured site address and try again."
+      );
+      error.code = "OAUTH_STATE_INVALID";
+      throw error;
     }
 
     const body = new URLSearchParams({
@@ -56,13 +106,28 @@
       throw new Error(result.error_description || "Unable to complete sign-in.");
     }
 
-    sessionStorage.setItem(tokenStorageKey, result.access_token);
-    sessionStorage.removeItem(stateStorageKey);
-    sessionStorage.removeItem(verifierStorageKey);
+    localStorage.setItem(tokenStorageKey, result.access_token);
+    clearOAuthValues();
+    sessionStorage.removeItem(oauthStateRetryStorageKey);
     history.replaceState(null, "", window.location.pathname);
+    window.dispatchEvent(new CustomEvent("fishintime:auth-changed"));
+    const pendingPlan = sessionStorage.getItem(pendingPlanStorageKey);
+    if (pendingPlan !== "monthly" && pendingPlan !== "annual") {
+      window.location.replace(new URL("/", config.redirect_uri));
+      return true;
+    }
+    return false;
   }
 
   async function beginSignIn() {
+    const callbackOrigin = new URL(config.redirect_uri).origin;
+    if (window.location.origin !== callbackOrigin) {
+      const canonicalUrl = getCanonicalUrl(new URL(window.location.href));
+      canonicalUrl.searchParams.set("signin", "1");
+      window.location.replace(canonicalUrl);
+      return;
+    }
+
     const verifier = randomUrlSafeString();
     const state = randomUrlSafeString();
     const digest = await crypto.subtle.digest(
@@ -87,7 +152,7 @@
   }
 
   async function requestApi(path, options = {}) {
-    const token = sessionStorage.getItem(tokenStorageKey);
+    const token = getAccessToken();
     const headers = new Headers(options.headers || {});
     if (token) headers.set("Authorization", `Bearer ${token}`);
     const response = await fetch(`${apiBase}${path}`, {
@@ -127,8 +192,9 @@
   }
 
   async function signOut() {
-    sessionStorage.removeItem(tokenStorageKey);
+    clearAccessToken();
     sessionStorage.removeItem(pendingPlanStorageKey);
+    window.dispatchEvent(new CustomEvent("fishintime:auth-changed"));
     const logout = new URL(`${config.login_domain}/logout`);
     logout.search = new URLSearchParams({
       client_id: config.client_id,
@@ -168,7 +234,7 @@
     document.getElementById("annualPrice").textContent =
       formatPrice(planData.annual.amount_cents, planData.annual.interval);
 
-    const token = sessionStorage.getItem(tokenStorageKey);
+    const token = getAccessToken();
     if (token) {
       const status = await requestApi("/api/billing/status");
       if (status.active) {
@@ -184,18 +250,67 @@
     try {
       const callback = new URL(window.location.href);
       config = await requestApi("/api/billing/config");
+      const callbackOrigin = new URL(config.redirect_uri).origin;
+      if (window.location.origin !== callbackOrigin) {
+        window.location.replace(getCanonicalUrl(callback));
+        return;
+      }
+
       if (callback.searchParams.has("error")) {
         throw new Error(
           callback.searchParams.get("error_description") || "Sign-in was canceled."
         );
       }
 
+      if (callback.searchParams.get("signin") === "1") {
+        callback.searchParams.delete("signin");
+        history.replaceState(null, "", callback);
+        await beginSignIn();
+        return;
+      }
+
       const receivedCode = callback.searchParams.has("code");
       if (receivedCode) {
-        await exchangeAuthorizationCode(
-          callback.searchParams.get("code"),
-          callback.searchParams.get("state")
-        );
+        try {
+          const redirected = await exchangeAuthorizationCode(
+            callback.searchParams.get("code"),
+            callback.searchParams.get("state")
+          );
+          if (redirected) return;
+        } catch (error) {
+          const existingToken = getAccessToken();
+          if (existingToken) {
+            let tokenIsValid = false;
+            try {
+              await requestApi("/api/billing/account");
+              tokenIsValid = true;
+            } catch {
+              clearAccessToken();
+            }
+            if (tokenIsValid) {
+              clearOAuthValues();
+              history.replaceState(null, "", callback.pathname);
+              const pendingPlan = sessionStorage.getItem(pendingPlanStorageKey);
+              if (pendingPlan === "monthly" || pendingPlan === "annual") {
+                await createCheckout(pendingPlan);
+                return;
+              }
+              window.location.replace("/");
+              return;
+            }
+          }
+          if (
+            error.code === "OAUTH_STATE_INVALID" &&
+            sessionStorage.getItem(oauthStateRetryStorageKey) !== "1"
+          ) {
+            sessionStorage.setItem(oauthStateRetryStorageKey, "1");
+            clearOAuthValues();
+            history.replaceState(null, "", callback.pathname);
+            await beginSignIn();
+            return;
+          }
+          throw error;
+        }
       }
 
       const pendingPlan = sessionStorage.getItem(pendingPlanStorageKey);
@@ -206,12 +321,22 @@
         await createCheckout(pendingPlan);
         return;
       }
+      if (receivedCode) {
+        window.location.replace("/");
+        return;
+      }
 
       if (plans) {
+        planButtons.forEach(button => { button.disabled = false; });
         await initializePlans();
       } else if (accountDetails) {
-        if (sessionStorage.getItem(tokenStorageKey)) {
+        if (getAccessToken()) {
           await loadAccount();
+          const currentUrl = new URL(window.location.href);
+          if (currentUrl.searchParams.get("manage") !== "1") {
+            window.location.replace("/");
+            return;
+          }
           message.textContent = "You are signed in.";
         } else {
           accountDetails.hidden = true;
@@ -221,10 +346,20 @@
         }
       }
     } catch (error) {
+      const callback = new URL(window.location.href);
+      if (
+        callback.searchParams.has("code") ||
+        callback.searchParams.has("state") ||
+        callback.searchParams.has("error")
+      ) {
+        history.replaceState(null, "", callback.pathname);
+        clearOAuthValues();
+        sessionStorage.removeItem(oauthStateRetryStorageKey);
+      }
       message.textContent = error.message;
       if (signInButton) {
         signInButton.hidden = false;
-        signInButton.textContent = sessionStorage.getItem(tokenStorageKey)
+        signInButton.textContent = getAccessToken()
           ? "Sign out"
           : "Sign in or create account";
       }
@@ -233,7 +368,7 @@
 
   signInButton?.addEventListener("click", async () => {
     try {
-      if (sessionStorage.getItem(tokenStorageKey)) {
+      if (getAccessToken()) {
         await signOut();
       } else {
         await beginSignIn();
@@ -243,12 +378,24 @@
     }
   });
 
+  window.addEventListener("fishintime:auth-state-changed", event => {
+    if (!accountDetails || !event.detail?.account) return;
+    if (new URL(window.location.href).searchParams.get("manage") !== "1") {
+      window.location.replace("/");
+      return;
+    }
+    signInButton.hidden = false;
+    signInButton.textContent = "Sign out";
+    accountDetails.hidden = false;
+    message.textContent = "You are signed in.";
+  });
+
   plans?.addEventListener("click", async event => {
     const button = event.target.closest("button[data-plan]");
     if (!button) return;
     button.disabled = true;
     try {
-      const token = sessionStorage.getItem(tokenStorageKey);
+      const token = getAccessToken();
       if (!token) {
         sessionStorage.setItem(pendingPlanStorageKey, button.dataset.plan);
         message.textContent = "Sign in or create an account to continue to checkout.";

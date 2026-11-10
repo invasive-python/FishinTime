@@ -1,3 +1,4 @@
+import json
 import os
 
 import boto3
@@ -6,6 +7,13 @@ from botocore.exceptions import BotoCoreError, ClientError
 
 class SecretsManagerError(RuntimeError):
     """Raised when the application cannot retrieve its configured secret."""
+
+
+_SECRET_FIELDS = {
+    "FishinSecret_OpenAI": "OPENAI_API_KEY",
+    "FishinSecret_Agent_Id": "AGENT_ID",
+    "FishinSecret_Stripe_API_Key": "FishinSecret_Stripe_API",
+}
 
 
 def get_secret(secret_name: str) -> str:
@@ -37,4 +45,27 @@ def get_secret(secret_name: str) -> str:
         raise SecretsManagerError(
             f"Secret '{secret_name}' must contain a non-empty SecretString."
         )
-    return secret_string
+
+    field_name = _SECRET_FIELDS.get(secret_name)
+    if field_name is None:
+        return secret_string
+
+    try:
+        secret_data = json.loads(secret_string)
+    except json.JSONDecodeError:
+        return secret_string
+
+    if not isinstance(secret_data, dict):
+        raise SecretsManagerError(
+            f"Secret '{secret_name}' must be a JSON object containing "
+            f"a non-empty '{field_name}' field."
+        )
+
+    secret_value = secret_data.get(field_name)
+    if not isinstance(secret_value, str) or not secret_value.strip():
+        raise SecretsManagerError(
+            f"Secret '{secret_name}' must contain a non-empty "
+            f"'{field_name}' field."
+        )
+
+    return secret_value.strip()

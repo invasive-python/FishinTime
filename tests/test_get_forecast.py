@@ -31,6 +31,7 @@ class ForecastRouteTests(unittest.TestCase):
             page = client.get("/billing/subscribe")
             account_page = client.get("/billing/account")
             client_script = client.get("/billing/client.js")
+            navigation_script = client.get("/billing/navigation.js")
             config = client.get("/static/config.js")
             stylesheet = client.get("/static/common.css")
             success = client.get("/billing/success")
@@ -38,20 +39,51 @@ class ForecastRouteTests(unittest.TestCase):
 
         self.assertEqual(root.status_code, 200)
         self.assertIn("Find your fishing window", root.text)
+        self.assertIn('data-site-navigation', root.text)
+        self.assertIn('data-account-welcome', root.text)
+        self.assertIn('/billing/navigation.js', root.text)
+        self.assertIn('src="/static/config.js"', root.text)
         self.assertEqual(page.status_code, 200)
         self.assertIn("Unlock AI fishing recommendations", page.text)
+        self.assertIn('data-site-navigation', page.text)
+        self.assertIn('data-account-welcome', page.text)
+        self.assertIn('data-signed-out-only', page.text)
         self.assertIn('data-plan="monthly">Choose monthly</button>', page.text)
         self.assertIn('data-plan="annual">Choose annual</button>', page.text)
         self.assertEqual(account_page.status_code, 200)
         self.assertIn("Sign in and manage your account", account_page.text)
+        self.assertIn('data-site-navigation', account_page.text)
+        self.assertIn('data-account-welcome', account_page.text)
         self.assertIn("Change password", account_page.text)
         self.assertEqual(client_script.status_code, 200)
         self.assertIn("oauth2/authorize", client_script.text)
+        self.assertIn('window.location.replace("/")', client_script.text)
+        self.assertIn("localStorage.setItem(tokenStorageKey, result.access_token)", client_script.text)
+        self.assertIn("sessionStorage.setItem(stateStorageKey, state)", client_script.text)
+        self.assertIn("sessionStorage.setItem(verifierStorageKey, verifier)", client_script.text)
+        self.assertIn('error.code = "OAUTH_STATE_INVALID"', client_script.text)
+        self.assertIn(
+            'sessionStorage.getItem(oauthStateRetryStorageKey) !== "1"',
+            client_script.text,
+        )
+        self.assertIn(
+            'searchParams.get("manage") !== "1"', client_script.text
+        )
+        self.assertEqual(navigation_script.status_code, 200)
+        self.assertIn("/api/billing/account", navigation_script.text)
+        self.assertIn("Welcome", navigation_script.text)
+        self.assertIn('href: "/"', navigation_script.text)
+        self.assertIn('href: "/billing/account?manage=1"', navigation_script.text)
+        self.assertIn("localStorage.getItem(tokenStorageKey)", navigation_script.text)
         self.assertEqual(config.status_code, 200)
         self.assertEqual(stylesheet.status_code, 200)
         self.assertIn("background-image", stylesheet.text)
         self.assertEqual(success.status_code, 200)
         self.assertEqual(cancel.status_code, 200)
+        self.assertIn('data-site-navigation', success.text)
+        self.assertIn('data-site-navigation', cancel.text)
+        self.assertIn('data-account-welcome', success.text)
+        self.assertIn('data-account-welcome', cancel.text)
         self.assertEqual(get_secret.call_count, 3)
 
     @patch(
@@ -295,6 +327,42 @@ class ForecastRouteTests(unittest.TestCase):
         self.assertIn("active subscription", job["error"])
         has_active_subscription.assert_called_once_with("subscriber-1")
         openai.assert_not_called()
+
+    @patch("routers.forecast_router.OpenAI")
+    @patch("routers.forecast_router.has_active_subscription", return_value=True)
+    def test_ai_worker_uses_secret_values_loaded_at_startup(
+        self, has_active_subscription, openai
+    ):
+        job = {"status": "pending", "user_id": "subscriber-1"}
+        request = Mock(
+            app=Mock(
+                state=Mock(
+                    evaluation_jobs={"job-id": job},
+                    openai_api_key="sk-test-openai-key",
+                    openai_agent_id="agent-test-id",
+                )
+            )
+        )
+        stream = Mock()
+        stream.__enter__ = Mock(return_value=stream)
+        stream.__exit__ = Mock(return_value=None)
+        stream.get_final_result.return_value = Mock(output_text="Fish at dawn.")
+        openai.return_value.beta.agents.sessions.create.return_value.with_result_collection.return_value = stream
+        forecast = Mock()
+        forecast.model_dump_json.return_value = "{}"
+
+        get_evaluation(request, forecast, "job-id")
+
+        self.assertEqual(openai.call_args.kwargs["api_key"], "sk-test-openai-key")
+        self.assertEqual(
+            openai.return_value.beta.agents.sessions.create.call_args.kwargs[
+                "agent_id"
+            ],
+            "agent-test-id",
+        )
+        self.assertEqual(job["status"], "completed")
+        self.assertEqual(job["ai_evaluation"], "Fish at dawn.")
+        has_active_subscription.assert_called_once_with("subscriber-1")
 
     def test_openapi_registers_current_forecast_contract(self):
         schema = app.openapi()

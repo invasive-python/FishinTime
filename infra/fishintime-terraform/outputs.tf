@@ -19,8 +19,8 @@ output "api_domain_name" {
 }
 
 output "domain_name_servers" {
-  description = "Set these nameservers at the domain registrar before applying the ACM certificate."
-  value       = aws_route53_zone.main.name_servers
+  description = "Nameservers for the public hosted zone selected by route53_zone_id."
+  value       = data.aws_route53_zone.authoritative.name_servers
 }
 
 output "ecs_cluster_name" {

@@ -98,6 +98,24 @@ class BillingRouteTests(unittest.TestCase):
         )
 
     @patch("billing.router.boto3.client")
+    def test_account_profile_uses_friendly_name_instead_of_uuid(
+        self, cognito_client
+    ):
+        cognito_client.return_value.get_user.return_value = {
+            "Username": "123e4567-e89b-12d3-a456-426614174000",
+            "UserAttributes": [
+                {"Name": "email", "Value": "angler@example.com"},
+            ],
+        }
+
+        result = get_account_profile(
+            user={"id": "user-123"},
+            credentials=Mock(credentials="access-token"),
+        )
+
+        self.assertEqual(result["username"], "angler")
+
+    @patch("billing.router.boto3.client")
     def test_account_email_update_and_verification_use_access_token(
         self, cognito_client
     ):
@@ -178,6 +196,10 @@ class BillingRouteTests(unittest.TestCase):
             params["line_items"][0]["price_data"]["recurring"],
             {"interval": "year"},
         )
+        self.assertEqual(
+            params["line_items"][0]["price_data"]["product_data"]["tax_code"],
+            "txcd_10105001",
+        )
         self.assertEqual(params["client_reference_id"], "user-123")
         self.assertEqual(
             params["subscription_data"]["metadata"]["user_id"],
@@ -188,6 +210,33 @@ class BillingRouteTests(unittest.TestCase):
             "https://api.example.com/billing/success"
             "?session_id={CHECKOUT_SESSION_ID}",
         )
+
+    @patch(
+        "billing.router.stripe.checkout.Session.create",
+        side_effect=stripe.InvalidRequestError(
+            "No such customer", "customer", code="resource_missing"
+        ),
+    )
+    @patch("billing.router._get_billing_table")
+    def test_checkout_reports_customer_mode_mismatch(
+        self, get_table, create_session
+    ):
+        get_table.return_value.get_item.return_value = {
+            "Item": {"customer_id": "cus_existing"}
+        }
+        with patch.object(stripe, "api_key", "test-key"), patch.dict(
+            "os.environ", {}, clear=True
+        ):
+            with self.assertLogs("billing.router", level="ERROR"):
+                with self.assertRaises(HTTPException) as raised:
+                    create_checkout(
+                        checkout_request=CheckoutRequest(plan="monthly"),
+                        user={"id": "user-123", "email": "angler@example.com"},
+                    )
+
+        self.assertEqual(raised.exception.status_code, 502)
+        self.assertIn("saved billing customer", raised.exception.detail)
+        create_session.assert_called_once()
 
     @patch("billing.router._get_billing_table")
     def test_subscription_webhook_persists_entitlement(self, get_table):
@@ -205,6 +254,7 @@ class BillingRouteTests(unittest.TestCase):
                 }
             },
         }
+        event = stripe.Event.construct_from(event, None)
 
         _store_subscription_event(event)
 

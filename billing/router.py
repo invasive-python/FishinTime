@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+import uuid
 from typing import Annotated, Any, Literal
 
 import boto3
@@ -27,6 +28,14 @@ logger = logging.getLogger(__name__)
 ACTIVE_STATUSES = {"active", "trialing"}
 CUSTOMER_SK = "STRIPE_CUSTOMER"
 SUBSCRIPTION_SK = "SUBSCRIPTION"
+
+
+def _is_uuid(value: str) -> bool:
+    try:
+        uuid.UUID(value)
+    except ValueError:
+        return False
+    return True
 
 
 class CheckoutRequest(BaseModel):
@@ -278,8 +287,20 @@ def get_account_profile(
         for attribute in response.get("UserAttributes", [])
         if "Name" in attribute and "Value" in attribute
     }
+    username = response.get("Username", "")
+    display_name = (
+        attributes.get("preferred_username")
+        or attributes.get("name")
+        or (
+            username
+            if username and "@" not in username and not _is_uuid(username)
+            else ""
+        )
+        or attributes.get("email", "").partition("@")[0]
+        or "angler"
+    )
     return {
-        "username": response.get("Username", ""),
+        "username": display_name,
         "email": attributes.get("email", ""),
         "email_verified": attributes.get("email_verified") == "true",
     }
@@ -388,7 +409,10 @@ def create_checkout(
                         "currency": "usd",
                         "unit_amount": plan["amount_cents"],
                         "recurring": {"interval": plan["interval"]},
-                        "product_data": {"name": product_name},
+                        "product_data": {
+                            "name": product_name,
+                            "tax_code": "txcd_10105001",
+                        },
                     },
                     "quantity": 1,
                 }
@@ -408,10 +432,29 @@ def create_checkout(
             },
         )
     except stripe.StripeError as exc:
-        logger.exception("Stripe could not create a checkout session.")
+        logger.exception(
+            "Stripe could not create a checkout session "
+            "(code=%s, param=%s, request_id=%s).",
+            exc.code,
+            exc.param,
+            exc.request_id,
+        )
+        if isinstance(exc, stripe.AuthenticationError):
+            detail = (
+                "Stripe rejected the configured API key. Verify that it is a "
+                "secret key for the intended test or live mode."
+            )
+        elif exc.code == "resource_missing" and exc.param == "customer":
+            detail = (
+                "Stripe could not find the saved billing customer in the "
+                "configured account or mode. Check whether the customer was "
+                "created in test or live mode."
+            )
+        else:
+            detail = exc.user_message or "Stripe could not start checkout."
         raise HTTPException(
             status_code=502,
-            detail="Stripe could not start checkout.",
+            detail=detail,
         ) from exc
 
     if not session.url:
@@ -463,6 +506,8 @@ def create_portal_session(
 
 
 def _store_subscription_event(event: Any) -> None:
+    if not isinstance(event, dict):
+        event = event.to_dict()
     subscription = event["data"]["object"]
     metadata = subscription.get("metadata") or {}
     user_id = metadata.get("user_id")

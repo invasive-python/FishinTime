@@ -7,7 +7,6 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY api.py ./
-COPY res ./res
 COPY models ./models
 COPY routers ./routers
 COPY services ./services

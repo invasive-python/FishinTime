@@ -16,6 +16,11 @@ variable "domain_name" {
   default     = "tidalfishintime.com"
 }
 
+variable "route53_zone_id" {
+  description = "ID of the public Route 53 hosted zone delegated by the registered domain."
+  type        = string
+}
+
 variable "container_image_tag" {
   description = "ECR image tag to deploy. Push this tag before applying if the service is being created for the first time."
   type        = string

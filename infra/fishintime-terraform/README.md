@@ -26,8 +26,8 @@ The Cognito callback and logout URL lists must include
 
 1. This creates resources in the AWS account selected by your CLI credentials. Verify the account first.
 2. The OpenAI, agent ID, and Stripe webhook secret containers are created without values. Add values outside Terraform so secrets are not embedded in configuration or state.
-3. OpenAI and agent ID secret values are JSON objects with `OPENAI_API_KEY` and `AGENT_ID` fields. The existing Stripe API secret is a plain-text Stripe test-mode key.
-4. The default HTTPS configuration creates a public Route 53 hosted zone for `tidalfishintime.com` (about $0.50/month). The registered domain must delegate DNS to that hosted zone's name servers before ACM can validate the certificate.
+3. OpenAI, agent ID, and Stripe API secrets may be JSON objects with `OPENAI_API_KEY`, `AGENT_ID`, and `FishinSecret_Stripe_API` fields, respectively. The Stripe field must contain a test-mode key; plain-text values remain supported.
+4. Set `route53_zone_id` to the public Route 53 hosted zone that is authoritative for the registered domain. Confirm its name servers match `dig +short NS <domain>`; ACM validation records must be created in that delegated zone.
 5. Fargate tasks receive public IPs so they can call OpenAI, NOAA, and USNO without a NAT gateway. The task security group only allows inbound app traffic from the ALB.
 6. If a secret name is pending deletion from a prior attempt, AWS may prevent immediate reuse. Restore it or wait until its recovery window expires.
 7. Check that the selected account's organization policies allow these resources and actions.
@@ -126,8 +126,9 @@ the secret string; the application parses the expected field from it.
 
 The Stripe API secret already exists in this account. Terraform reads its ARN
 without managing or replacing the key. Confirm it contains the Stripe test-mode
-secret key. Terraform creates the webhook secret container; populate it with
-the test-mode endpoint's `whsec_...` signing secret.
+secret key, either as plain text or under the `FishinSecret_Stripe_API` JSON
+field. Terraform creates the webhook secret container; populate it with the
+test-mode endpoint's `whsec_...` signing secret.
 
 The API key is read at app startup with
 `get_secret("FishinSecret_Stripe_API_Key")`; the webhook signing secret is loaded
@@ -156,18 +157,18 @@ amounts in cents as needed. For example, `99` is $0.99 and `999` is $9.99.
 
 Confirm that the AWS CLI profile `fishintime-757` selects account
 `757266935832`. The default API hostname is
-`api.tidalfishintime.com`; override `domain_name` if your registered domain
-differs.
+`api.tidalfishintime.com`; override `domain_name` and `route53_zone_id` if your
+registered domain or authoritative hosted zone differs.
 
 ```bash
 aws sts get-caller-identity --profile fishintime-757
-terraform apply -target=aws_route53_zone.main
-terraform output -json domain_name_servers
+dig +short NS tidalfishintime.com
 ```
 
-Set the returned nameservers at the domain registrar for `tidalfishintime.com`.
-Wait for DNS delegation to propagate before continuing. Then plan and apply the
-certificate, HTTPS listener, and API alias record:
+Verify that the public nameservers match the nameservers for the zone selected
+by `route53_zone_id`. If they do not, correct the zone ID or configure
+delegation before requesting the certificate. Then review the full plan before
+applying:
 
 ```bash
 terraform plan -out fishintime.tfplan

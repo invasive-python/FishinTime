@@ -77,6 +77,11 @@ def billing_client() -> FileResponse:
     return FileResponse(Path(__file__).with_name("billing") / "client.js")
 
 
+@app.get("/billing/navigation.js", include_in_schema=False)
+def billing_navigation() -> FileResponse:
+    return FileResponse(Path(__file__).with_name("billing") / "navigation.js")
+
+
 @app.get("/billing/success", include_in_schema=False)
 def billing_success_page() -> FileResponse:
     return FileResponse(Path(__file__).with_name("billing") / "success.html")

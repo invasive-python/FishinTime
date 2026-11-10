@@ -19,8 +19,8 @@ to store API keys or other secrets.
 Install the project dependencies with `pip install -r requirements.txt`. Store
 the OpenAI API key as JSON (`{"OPENAI_API_KEY":"..."}`) in
 `FishinSecret_OpenAI` and the agent ID as JSON (`{"AGENT_ID":"..."}`) in
-`FishinSecret_Agent_Id`. The AWS region defaults to `us-east-2` and can be
-overridden with `AWS_REGION`.
+`FishinSecret_Agent_Id`. The application extracts those fields from the JSON.
+The AWS region defaults to `us-east-2` and can be overridden with `AWS_REGION`.
 
 The application reads the secret once during FastAPI startup and keeps it in
 memory for that process. If AWS Secrets Manager cannot return a valid secret,
@@ -68,9 +68,14 @@ Price IDs need to be created or copied into the application. Remove any older
 `stripe_price_monthly` / `stripe_price_annual` Price ID entries from
 `terraform.tfvars`; use the new `stripe_monthly_amount_cents` /
 `stripe_annual_amount_cents` values instead.
+Checkout classifies the AI fishing recommendation subscription with Stripe
+Tax code `txcd_10105001` (AIaaS, cloud-based, personal use) to support Stripe
+Managed Payments. This assumes the service is sold to individual recreational
+anglers; review the tax classification if the intended customer base changes.
 
 The existing `FishinSecret_Stripe_API_Key` secret must contain your Stripe
-test-mode secret API key. Configure a Stripe test-mode webhook at
+test-mode secret API key, either as plain text or in a JSON object under the
+`FishinSecret_Stripe_API` field. Configure a Stripe test-mode webhook at
 `https://api.tidalfishintime.com/api/billing/webhook` for
 `customer.subscription.created`, `customer.subscription.updated`, and
 `customer.subscription.deleted`, then store that endpoint's signing secret in

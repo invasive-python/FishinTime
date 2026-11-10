@@ -6,10 +6,13 @@
     <title>FishinTime Subscription Plans</title>
     <link rel="stylesheet" href="/static/common.css">
     <script src="/static/config.js"></script>
+    <script src="/billing/navigation.js" defer></script>
     <script src="/billing/client.js" defer></script>
   </head>
   <body>
     <main class="page-shell">
+      <nav class="site-navigation" data-site-navigation aria-label="Main navigation"></nav>
+      <p class="account-greeting" data-account-welcome aria-live="polite" hidden></p>
       <header class="masthead">
         <p class="eyebrow">Subscription plans</p>
         <h1>Unlock AI fishing recommendations</h1>
@@ -28,7 +31,7 @@
             <button class="submit-button" type="button" data-plan="annual">Choose annual</button>
           </div>
         </section>
-        <p>Already have an account? <a href="/billing/account">Sign in or manage your account</a>.</p>
+        <p data-signed-out-only>Already have an account? <a href="/billing/account">Sign in or manage your account</a>.</p>
       </section>
     </main>
   </body>

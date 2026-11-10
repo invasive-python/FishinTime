@@ -1,4 +1,3 @@
-import json
 import logging
 import uuid
 from datetime import date as date_type
@@ -150,10 +149,7 @@ def get_evaluation(
             return
 
         api_key = request.app.state.openai_api_key
-        secret = json.loads(api_key)["OPENAI_API_KEY"]
-
         agent_key = request.app.state.openai_agent_id
-        agent_secret = json.loads(agent_key)["AGENT_ID"]
 
         prompt = f"""Using the information this JSON: {forecast.model_dump_json()}
                 make a judgment as to whether or not it is a good day to go fishing
@@ -164,9 +160,9 @@ def get_evaluation(
                 city and date.
                 """;
 
-        client = OpenAI(api_key=secret)
+        client = OpenAI(api_key=api_key)
         with client.beta.agents.sessions.create(
-            agent_id=agent_secret,
+            agent_id=agent_key,
             environment={"type": "none"},
             input=prompt,
             stream=True,

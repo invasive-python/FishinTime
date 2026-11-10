@@ -1,0 +1,15 @@
+.git/
+.venv/
+.env
+.env.*
+**/__pycache__/
+**/*.py[cod]
+.cache/
+.cache.sqlite
+node_modules/
+infra/
+tests/
+.vscode/
+**/.terraform/
+**/terraform.tfstate*
+**/*.tfplan
