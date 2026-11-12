@@ -31,12 +31,24 @@ class SecretsManagerTests(unittest.TestCase):
     def test_reads_expected_value_from_json_secret(self, create_client):
         secrets_client = create_client.return_value
         secrets_client.get_secret_value.return_value = {
-            "SecretString": '{"FishinSecret_Stripe_API":"sk_test_value"}'
+            "SecretString": '{"FishinSecret_Stripe_API_Key":"sk_test_value"}'
+        }
+
+        self.assertEqual(
+            get_secret("FishinSecret_Stripe_API"),
+            "sk_test_value",
+        )
+
+    @patch("services.secrets_manager.boto3.client")
+    def test_reads_sandbox_stripe_key_from_legacy_secret(self, create_client):
+        secrets_client = create_client.return_value
+        secrets_client.get_secret_value.return_value = {
+            "SecretString": '{"FishinSecret_Stripe_API":"rk_test_value"}'
         }
 
         self.assertEqual(
             get_secret("FishinSecret_Stripe_API_Key"),
-            "sk_test_value",
+            "rk_test_value",
         )
 
     @patch("services.secrets_manager.boto3.client")
@@ -46,9 +58,10 @@ class SecretsManagerTests(unittest.TestCase):
         }
 
         with self.assertRaisesRegex(
-            SecretsManagerError, "non-empty 'FishinSecret_Stripe_API' field"
+            SecretsManagerError,
+            "non-empty 'FishinSecret_Stripe_API_Key' field",
         ):
-            get_secret("FishinSecret_Stripe_API_Key")
+            get_secret("FishinSecret_Stripe_API")
 
     @patch("services.secrets_manager.boto3.client")
     def test_reports_missing_secret_string(self, create_client):

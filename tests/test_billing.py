@@ -17,10 +17,12 @@ from billing.router import (
     get_billing_config,
     get_plans,
     handle_stripe_webhook,
+    create_portal_session,
     update_account_email,
     verify_account_email,
     UpdateEmailRequest,
 )
+from services.stripe_config import get_stripe_webhook_secret_name
 
 
 class BillingRouteTests(unittest.TestCase):
@@ -65,8 +67,8 @@ class BillingRouteTests(unittest.TestCase):
             {
                 "login_domain": "https://fishin.auth.us-east-2.amazoncognito.com",
                 "client_id": "public-client-id",
-                "redirect_uri": "https://api.example.com/billing/account",
-                "logout_uri": "https://api.example.com/billing/account",
+                "redirect_uri": "https://api.example.com/",
+                "logout_uri": "https://api.example.com/",
             },
         )
 
@@ -238,6 +240,34 @@ class BillingRouteTests(unittest.TestCase):
         self.assertIn("saved billing customer", raised.exception.detail)
         create_session.assert_called_once()
 
+    @patch(
+        "billing.router.stripe.billing_portal.Session.create",
+        side_effect=stripe.InvalidRequestError(
+            "No such customer", "customer", code="resource_missing"
+        ),
+    )
+    @patch("billing.router._get_billing_table")
+    def test_portal_explains_customer_account_or_mode_mismatch(
+        self, get_table, create_session
+    ):
+        get_table.return_value.get_item.return_value = {
+            "Item": {"customer_id": "cus_existing"}
+        }
+        with patch.object(stripe, "api_key", "test-key"), patch.dict(
+            "os.environ", {}, clear=True
+        ):
+            with self.assertLogs("billing.router", level="ERROR"):
+                with self.assertRaises(HTTPException) as raised:
+                    create_portal_session(user={"id": "user-123"})
+
+        self.assertEqual(raised.exception.status_code, 502)
+        self.assertIn("Stripe account or mode", raised.exception.detail)
+        self.assertIn("subscription is active", raised.exception.detail)
+        create_session.assert_called_once_with(
+            customer="cus_existing",
+            return_url="http://localhost:8000/billing/account",
+        )
+
     @patch("billing.router._get_billing_table")
     def test_subscription_webhook_persists_entitlement(self, get_table):
         event = {
@@ -280,6 +310,13 @@ class BillingRouteTests(unittest.TestCase):
             asyncio.run(handle_stripe_webhook(request, "sig"))
 
         self.assertEqual(raised.exception.status_code, 400)
+
+    @patch.dict("os.environ", {"STRIPE_MODE": "sandbox"})
+    def test_sandbox_mode_selects_sandbox_webhook_secret(self):
+        self.assertEqual(
+            get_stripe_webhook_secret_name(),
+            "FishinTime_Stripe_Webhook_Secret",
+        )
 
 
 if __name__ == "__main__":

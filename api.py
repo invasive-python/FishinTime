@@ -14,6 +14,10 @@ from routers.forecast_router import (
 )
 from routers.location_router import router as location_router
 from services.secrets_manager import SecretsManagerError, get_secret
+from services.stripe_config import (
+    get_stripe_api_secret_name,
+    get_stripe_mode,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +25,10 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
+        app.state.stripe_mode = get_stripe_mode()
         app.state.openai_api_key = get_secret("FishinSecret_OpenAI")
         app.state.openai_agent_id = get_secret("FishinSecret_Agent_Id")
-        app.state.stripe_api_key = get_secret("FishinSecret_Stripe_API_Key")
+        app.state.stripe_api_key = get_secret(get_stripe_api_secret_name())
         stripe.api_key = app.state.stripe_api_key
         app.state.evaluation_jobs = {}
     except SecretsManagerError as exc:

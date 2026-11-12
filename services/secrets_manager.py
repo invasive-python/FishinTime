@@ -12,6 +12,7 @@ class SecretsManagerError(RuntimeError):
 _SECRET_FIELDS = {
     "FishinSecret_OpenAI": "OPENAI_API_KEY",
     "FishinSecret_Agent_Id": "AGENT_ID",
+    "FishinSecret_Stripe_API": "FishinSecret_Stripe_API_Key",
     "FishinSecret_Stripe_API_Key": "FishinSecret_Stripe_API",
 }
 

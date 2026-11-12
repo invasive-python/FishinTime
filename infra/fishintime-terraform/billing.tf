@@ -25,11 +25,68 @@ resource "aws_dynamodb_table" "billing" {
   tags = local.common_tags
 }
 
+resource "aws_dynamodb_table" "billing_live" {
+  name         = "${local.name}-billing-live"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "PK"
+  range_key    = "SK"
+
+  attribute {
+    name = "PK"
+    type = "S"
+  }
+
+  attribute {
+    name = "SK"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  server_side_encryption {
+    enabled = true
+  }
+
+  tags = local.common_tags
+}
+
 resource "aws_cognito_user_pool" "users" {
   name = "${local.name}-users"
 
   username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
+
+  schema {
+    name                     = "stripe_customer_id"
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    required                 = false
+
+    string_attribute_constraints {}
+  }
+
+  schema {
+    name                     = "subscription_status"
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    required                 = false
+
+    string_attribute_constraints {}
+  }
+
+  schema {
+    name                     = "subscription_tier"
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    required                 = false
+
+    string_attribute_constraints {}
+  }
 
   password_policy {
     minimum_length                   = 12
@@ -87,13 +144,74 @@ resource "aws_cognito_user_pool_domain" "website" {
   user_pool_id = aws_cognito_user_pool.users.id
 }
 
+resource "aws_cognito_user_pool_ui_customization" "website" {
+  user_pool_id = aws_cognito_user_pool_domain.website.user_pool_id
+  client_id    = aws_cognito_user_pool_client.website.id
+
+  css = <<-CSS
+    .background-customizable {
+      background-color: #e8f4f2;
+    }
+
+    .banner-customizable {
+      background-color: #ffffff;
+      padding: 16px 16px 0 16px;
+    }
+
+    .label-customizable {
+      color: #173b42;
+      font-weight: 700;
+    }
+
+    .inputField-customizable {
+      width: 100%;
+      height: 44px;
+      color: #173b42;
+      background-color: #f1f8f6;
+      border: 1px solid #c7deda;
+    }
+
+    .inputField-customizable:focus {
+      border-color: #087e83;
+      outline: 2px;
+    }
+
+    .submitButton-customizable {
+      width: 100%;
+      height: 44px;
+      color: #ffffff;
+      background-color: #087e83;
+      font-size: 16px;
+      font-weight: bold;
+      margin: 16px 0 0 0;
+    }
+
+    .submitButton-customizable:hover {
+      color: #ffffff;
+      background-color: #05666b;
+    }
+
+    .textDescription-customizable {
+      color: #56747a;
+      font-size: 15px;
+    }
+  CSS
+}
+
 data "aws_secretsmanager_secret" "stripe_secret_key" {
-  name = "FishinSecret_Stripe_API_Key"
+  name = "FishinSecret_Stripe_API"
 }
 
 resource "aws_secretsmanager_secret" "stripe_webhook_secret" {
   name                    = "FishinTime_Stripe_Webhook_Secret"
   description             = "FishinTime Stripe webhook signing secret"
+  recovery_window_in_days = 7
+  tags                    = local.common_tags
+}
+
+resource "aws_secretsmanager_secret" "stripe_webhook_secret_live" {
+  name                    = "FishinTime_Stripe_Webhook_Secret_Live"
+  description             = "FishinTime Stripe live webhook signing secret"
   recovery_window_in_days = 7
   tags                    = local.common_tags
 }
@@ -112,7 +230,7 @@ resource "aws_iam_role_policy" "task_billing_table" {
         "dynamodb:UpdateItem",
         "dynamodb:TransactWriteItems"
       ]
-      Resource = aws_dynamodb_table.billing.arn
+      Resource = aws_dynamodb_table.billing_live.arn
     }]
   })
 }
@@ -128,7 +246,7 @@ resource "aws_iam_role_policy" "task_read_stripe_secrets" {
       Action = ["secretsmanager:GetSecretValue"]
       Resource = [
         data.aws_secretsmanager_secret.stripe_secret_key.arn,
-        aws_secretsmanager_secret.stripe_webhook_secret.arn
+        aws_secretsmanager_secret.stripe_webhook_secret_live.arn
       ]
     }]
   })
@@ -136,6 +254,14 @@ resource "aws_iam_role_policy" "task_read_stripe_secrets" {
 
 output "billing_table_name" {
   value = aws_dynamodb_table.billing.name
+}
+
+output "billing_live_table_name" {
+  value = aws_dynamodb_table.billing_live.name
+}
+
+output "stripe_live_webhook_secret_name" {
+  value = aws_secretsmanager_secret.stripe_webhook_secret_live.name
 }
 
 output "cognito_user_pool_id" {

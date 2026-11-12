@@ -39,8 +39,22 @@ aws configure --profile fishintime-757  # only if this profile is not configured
 set -a
 . ./.env
 set +a
-./.venv/bin/python -m uvicorn api:app --reload
+./.venv/bin/python run.py
 ```
+
+Local runs use the live Stripe account by default. To run against the retained
+Stripe sandbox instead:
+
+```sh
+./.venv/bin/python run.py --sandbox
+```
+
+In VS Code, choose **Run API (live)** or **Run API (sandbox)**. Sandbox mode
+uses the existing `FishinSecret_Stripe_API_Key` and `fishintime-billing`
+resources; live mode uses `FishinSecret_Stripe_API` and a separate
+`fishintime-billing-live` table. Apply the Terraform changes before using live
+mode locally. Sandbox and live customer IDs, subscriptions, and webhook
+signatures are isolated.
 
 Verify the profile points to account `757266935832` before running Terraform or
 the app:
@@ -73,27 +87,36 @@ Tax code `txcd_10105001` (AIaaS, cloud-based, personal use) to support Stripe
 Managed Payments. This assumes the service is sold to individual recreational
 anglers; review the tax classification if the intended customer base changes.
 
-The existing `FishinSecret_Stripe_API_Key` secret must contain your Stripe
-test-mode secret API key, either as plain text or in a JSON object under the
-`FishinSecret_Stripe_API` field. Configure a Stripe test-mode webhook at
+The `FishinSecret_Stripe_API` secret contains the live restricted Stripe API
+key, either as plain text or in a JSON object under the
+`FishinSecret_Stripe_API_Key` field. Sandbox mode uses the retained
+`FishinSecret_Stripe_API_Key` secret, whose JSON property is
+`FishinSecret_Stripe_API`. The secrets have different names and property names.
+Stripe API keys start with `sk_live_` or `rk_live_` in live mode and
+`sk_test_` or `rk_test_` in a sandbox; `prod_` is a Stripe Product ID prefix,
+not an API key prefix.
+
+Configure separate Stripe webhook endpoints for live and sandbox, both pointed
+at
 `https://api.tidalfishintime.com/api/billing/webhook` for
 `customer.subscription.created`, `customer.subscription.updated`, and
-`customer.subscription.deleted`, then store that endpoint's signing secret in
-`FishinTime_Stripe_Webhook_Secret`. The application reads the API key with
-`get_secret("FishinSecret_Stripe_API_Key")` at startup and retrieves the webhook
-signing secret from Secrets Manager when webhook requests arrive. The ECS task
-role needs access to both secrets and to the billing DynamoDB table; Terraform
-configures those permissions.
+`customer.subscription.deleted`. Store the sandbox endpoint's signing secret
+in `FishinTime_Stripe_Webhook_Secret` and the live endpoint's in
+`FishinTime_Stripe_Webhook_Secret_Live`. The application selects the key,
+webhook secret, and billing table for its Stripe mode.
 
-The Cognito callback and logout allow-lists must contain the exact account page
-URL `${app_base_url}/billing/account` (by default,
-`https://api.tidalfishintime.com/billing/account`). The plans are shown at
+The Cognito callback and logout allow-lists must contain the exact forecast
+URL `${app_base_url}/` (by default, `https://tidalfishintime.com/`). The
+`api.tidalfishintime.com` hostname remains an API compatibility alias. The
+account page URL `${app_base_url}/billing/account` can remain in these lists
+for compatibility. The plans are shown at
 `/billing/subscribe`; sign-in and account self-service are at `/billing/account`.
 The account page supports email changes with confirmation, password changes,
 and subscription management through the Stripe billing portal. With email as
 the user-pool sign-in attribute, changing the email also changes the address
 used to sign in. The subscription page uses Cognito's authorization-code flow
 with PKCE. Users can access forecast and environmental data without signing in;
-an active or trialing subscription is required only for AI fishing evaluations.
-Stripe API and webhook secrets are read from Secrets Manager, and subscription
-access is granted only after Stripe webhook events update the billing table.
+any signed-in user can request AI fishing evaluations. Subscription status
+remains available for billing and account management. Stripe API and webhook
+secrets are read from Secrets Manager, and subscription status is updated only
+after Stripe webhook events update the billing table.

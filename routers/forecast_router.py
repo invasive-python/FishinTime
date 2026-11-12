@@ -15,7 +15,6 @@ from fastapi import (
 from openai import OpenAI
 
 from billing.auth import get_optional_authenticated_user
-from billing.router import has_active_subscription
 from models.weather_schemas import EvaluationJobResponse, ForecastResponse
 from services import forecast_service
 
@@ -65,18 +64,7 @@ def get_forecast(
                 detail=f"No forecast or NOAA tide station found for {city} on {date}.",
             )
 
-        is_subscriber = False
         if user is not None:
-            try:
-                is_subscriber = has_active_subscription(str(user["id"]))
-            except HTTPException as exc:
-                if exc.status_code != 503:
-                    raise
-                logger.exception(
-                    "Could not verify subscription; returning free forecast data."
-                )
-
-        if is_subscriber:
             evaluation_id = str(uuid.uuid4())
             evaluation_jobs = getattr(request.app.state, "evaluation_jobs", None)
             if evaluation_jobs is None:
@@ -124,11 +112,6 @@ def get_evaluation_status(
         raise HTTPException(status_code=401, detail="Sign-in required.")
     if job.get("user_id") != str(user["id"]):
         raise HTTPException(status_code=404, detail="AI evaluation not found.")
-    if not has_active_subscription(str(user["id"])):
-        raise HTTPException(
-            status_code=403,
-            detail="An active subscription is required for AI evaluations.",
-        )
     return EvaluationJobResponse(
         status=job["status"],
         ai_evaluation=job.get("ai_evaluation"),
@@ -141,13 +124,6 @@ def get_evaluation(
 ) -> None:
     job = request.app.state.evaluation_jobs[evaluation_id]
     try:
-        if not has_active_subscription(job["user_id"]):
-            job.update(
-                status="failed",
-                error="An active subscription is required for AI evaluations.",
-            )
-            return
-
         api_key = request.app.state.openai_api_key
         agent_key = request.app.state.openai_agent_id
 

@@ -21,6 +21,10 @@ from starlette.concurrency import run_in_threadpool
 
 from billing.auth import bearer, require_authenticated_user
 from services.secrets_manager import SecretsManagerError, get_secret
+from services.stripe_config import (
+    get_billing_table_name,
+    get_stripe_webhook_secret_name,
+)
 
 router = APIRouter(prefix="/api/billing", tags=["billing"])
 logger = logging.getLogger(__name__)
@@ -109,11 +113,11 @@ def _cognito_api_error(exc: BotoCoreError) -> HTTPException:
 
 
 def _get_billing_table():
-    table_name = os.getenv("BILLING_TABLE_NAME")
+    table_name = get_billing_table_name()
     if not table_name:
         raise HTTPException(
             status_code=503,
-            detail="Billing storage is not configured.",
+            detail="Billing storage is not configured for this Stripe mode.",
         )
     region = (
         os.getenv("AWS_REGION")
@@ -241,8 +245,8 @@ def get_billing_config() -> dict[str, str]:
     return {
         "login_domain": login_domain,
         "client_id": client_id,
-        "redirect_uri": f"{_app_base_url()}/billing/account",
-        "logout_uri": f"{_app_base_url()}/billing/account",
+        "redirect_uri": f"{_app_base_url()}/",
+        "logout_uri": f"{_app_base_url()}/",
     }
 
 
@@ -496,10 +500,26 @@ def create_portal_session(
             return_url=f"{_app_base_url()}/billing/account",
         )
     except stripe.StripeError as exc:
-        logger.exception("Stripe could not create a billing portal session.")
+        logger.exception(
+            "Stripe could not create a billing portal session "
+            "(code=%s, param=%s, request_id=%s).",
+            exc.code,
+            exc.param,
+            exc.request_id,
+        )
+        if exc.code == "resource_missing" and exc.param == "customer":
+            detail = (
+                "The saved billing customer was not found in the configured "
+                "Stripe account or mode. Verify the API key uses the same "
+                "Stripe account and test/live mode where this subscription "
+                "was created. Do not remove the saved customer record while "
+                "the subscription is active."
+            )
+        else:
+            detail = "Stripe could not open the billing portal."
         raise HTTPException(
             status_code=502,
-            detail="Stripe could not open the billing portal.",
+            detail=detail,
         ) from exc
 
     return {"portal_url": session.url}
@@ -572,7 +592,7 @@ async def handle_stripe_webhook(
 
     try:
         webhook_secret = await run_in_threadpool(
-            get_secret, "FishinTime_Stripe_Webhook_Secret"
+            get_secret, get_stripe_webhook_secret_name()
         )
     except SecretsManagerError as exc:
         logger.exception("Could not load the Stripe webhook signing secret.")

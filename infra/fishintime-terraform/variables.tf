@@ -11,7 +11,7 @@ variable "project_name" {
 }
 
 variable "domain_name" {
-  description = "Registered domain with a public Route 53 hosted zone for the API."
+  description = "Registered apex domain with a public Route 53 hosted zone."
   type        = string
   default     = "tidalfishintime.com"
 }
@@ -115,6 +115,6 @@ variable "stripe_annual_amount_cents" {
 
 variable "app_base_url" {
   type        = string
-  description = "Public HTTPS URL used for billing redirects and the Cognito callback, without a trailing slash."
-  default     = "https://api.tidalfishintime.com"
+  description = "Public HTTPS apex URL used for the app, billing redirects, and Cognito callbacks, without a trailing slash."
+  default     = "https://tidalfishintime.com"
 }

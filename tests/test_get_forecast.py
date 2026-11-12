@@ -39,9 +39,16 @@ class ForecastRouteTests(unittest.TestCase):
 
         self.assertEqual(root.status_code, 200)
         self.assertIn("Find your fishing window", root.text)
+        self.assertIn(
+            'href="/billing/account?signin=1" data-direct-signin>Sign in</a>',
+            root.text,
+        )
+        self.assertIn('href="/billing/subscribe">Create account</a>', root.text)
+        self.assertNotIn("View subscription options", root.text)
         self.assertIn('data-site-navigation', root.text)
         self.assertIn('data-account-welcome', root.text)
         self.assertIn('/billing/navigation.js', root.text)
+        self.assertIn('<script src="/billing/client.js" defer></script>', root.text)
         self.assertIn('src="/static/config.js"', root.text)
         self.assertEqual(page.status_code, 200)
         self.assertIn("Unlock AI fishing recommendations", page.text)
@@ -54,9 +61,14 @@ class ForecastRouteTests(unittest.TestCase):
         self.assertIn("Sign in and manage your account", account_page.text)
         self.assertIn('data-site-navigation', account_page.text)
         self.assertIn('data-account-welcome', account_page.text)
+        self.assertIn("oauth-navigation-pending body { visibility: hidden; }", account_page.text)
+        self.assertIn('classList.add("oauth-navigation-pending")', account_page.text)
         self.assertIn("Change password", account_page.text)
         self.assertEqual(client_script.status_code, 200)
+        self.assertIn('sessionStorage.removeItem("fishintime_last_forecast")', client_script.text)
+        self.assertIn('sessionStorage.setItem("fishintime_signed_out", "true")', client_script.text)
         self.assertIn("oauth2/authorize", client_script.text)
+        self.assertIn('callback.searchParams.get("signin") === "1"', client_script.text)
         self.assertIn('window.location.replace("/")', client_script.text)
         self.assertIn("localStorage.setItem(tokenStorageKey, result.access_token)", client_script.text)
         self.assertIn("sessionStorage.setItem(stateStorageKey, state)", client_script.text)
@@ -72,6 +84,8 @@ class ForecastRouteTests(unittest.TestCase):
         self.assertEqual(navigation_script.status_code, 200)
         self.assertIn("/api/billing/account", navigation_script.text)
         self.assertIn("Welcome", navigation_script.text)
+        self.assertIn('closest("[data-direct-signin]")', navigation_script.text)
+        self.assertIn("oauth2/authorize", navigation_script.text)
         self.assertIn('href: "/"', navigation_script.text)
         self.assertIn('href: "/billing/account?manage=1"', navigation_script.text)
         self.assertIn("localStorage.getItem(tokenStorageKey)", navigation_script.text)
@@ -121,8 +135,27 @@ class ForecastRouteTests(unittest.TestCase):
             [
                 "FishinSecret_OpenAI",
                 "FishinSecret_Agent_Id",
-                "FishinSecret_Stripe_API_Key",
+                "FishinSecret_Stripe_API",
             ],
+        )
+
+    @patch.dict("os.environ", {"STRIPE_MODE": "sandbox"})
+    @patch(
+        "api.get_secret",
+        side_effect=[
+            "test-api-key",
+            "test-agent-id",
+            "test-sandbox-stripe-key",
+        ],
+    )
+    def test_sandbox_startup_reads_sandbox_stripe_secret(self, get_secret):
+        with TestClient(app):
+            self.assertEqual(app.state.stripe_mode, "sandbox")
+            self.assertEqual(app.state.stripe_api_key, "test-sandbox-stripe-key")
+
+        self.assertEqual(
+            get_secret.call_args_list[-1].args[0],
+            "FishinSecret_Stripe_API_Key",
         )
 
     def test_maps_nested_temperature(self):
@@ -176,13 +209,8 @@ class ForecastRouteTests(unittest.TestCase):
         self.assertIn("External provider", raised.exception.detail)
         serve_forecast.assert_called_once()
 
-    @patch(
-        "routers.forecast_router.forecast_service.serve_forecast",
-    )
-    @patch("routers.forecast_router.has_active_subscription", return_value=True)
-    def test_active_subscriber_receives_ai_evaluation(
-        self, has_active_subscription, serve_forecast
-    ):
+    @patch("routers.forecast_router.forecast_service.serve_forecast")
+    def test_signed_in_user_receives_ai_evaluation(self, serve_forecast):
         forecast = Mock()
         forecast.city = "Miami"
         forecast.date = date.today().isoformat()
@@ -229,12 +257,10 @@ class ForecastRouteTests(unittest.TestCase):
         )
         self.assertEqual(len(background_tasks.tasks), 1)
         serve_forecast.assert_called_once()
-        has_active_subscription.assert_called_once_with("subscriber-1")
 
-    @patch("routers.forecast_router.has_active_subscription", return_value=False)
     @patch("routers.forecast_router.forecast_service.serve_forecast")
-    def test_forecast_data_is_free_without_ai_evaluation(
-        self, serve_forecast, has_active_subscription
+    def test_signed_in_user_without_subscription_receives_ai_evaluation(
+        self, serve_forecast
     ):
         forecast = Mock()
         serve_forecast.return_value = forecast
@@ -250,9 +276,8 @@ class ForecastRouteTests(unittest.TestCase):
         )
 
         self.assertIs(response, forecast)
-        self.assertIsNone(response.evaluation_id)
-        self.assertEqual(len(background_tasks.tasks), 0)
-        has_active_subscription.assert_called_once_with("free-user")
+        self.assertIsNotNone(response.evaluation_id)
+        self.assertEqual(len(background_tasks.tasks), 1)
 
     @patch("routers.forecast_router.forecast_service.serve_forecast")
     def test_unauthenticated_forecast_data_remains_free(self, serve_forecast):
@@ -286,13 +311,9 @@ class ForecastRouteTests(unittest.TestCase):
             )
         )
 
-        with patch(
-            "routers.forecast_router.has_active_subscription",
-            return_value=True,
-        ):
-            response = get_evaluation_status(
-                "job-id", request, user={"id": "subscriber-1"}
-            )
+        response = get_evaluation_status(
+            "job-id", request, user={"id": "subscriber-1"}
+        )
 
         self.assertEqual(response.status, "completed")
         self.assertEqual(response.ai_evaluation, "Fish at dawn.")
@@ -306,33 +327,33 @@ class ForecastRouteTests(unittest.TestCase):
         self.assertEqual(raised.exception.status_code, 404)
 
     @patch("routers.forecast_router.OpenAI")
-    @patch("routers.forecast_router.has_active_subscription", return_value=False)
-    def test_ai_worker_rechecks_subscription_before_calling_openai(
-        self, has_active_subscription, openai
-    ):
+    def test_ai_worker_runs_for_signed_in_user_without_subscription(self, openai):
         job = {"status": "pending", "user_id": "subscriber-1"}
         request = Mock(
             app=Mock(
                 state=Mock(
                     evaluation_jobs={"job-id": job},
-                    openai_api_key="not-used",
-                    openai_agent_id="not-used",
+                    openai_api_key="sk-test-openai-key",
+                    openai_agent_id="agent-test-id",
                 )
             )
         )
+        stream = Mock()
+        stream.__enter__ = Mock(return_value=stream)
+        stream.__exit__ = Mock(return_value=None)
+        stream.get_final_result.return_value = Mock(output_text="Fish at dawn.")
+        openai.return_value.beta.agents.sessions.create.return_value.with_result_collection.return_value = stream
+        forecast = Mock()
+        forecast.model_dump_json.return_value = "{}"
 
-        get_evaluation(request, Mock(), "job-id")
+        get_evaluation(request, forecast, "job-id")
 
-        self.assertEqual(job["status"], "failed")
-        self.assertIn("active subscription", job["error"])
-        has_active_subscription.assert_called_once_with("subscriber-1")
-        openai.assert_not_called()
+        self.assertEqual(job["status"], "completed")
+        self.assertEqual(job["ai_evaluation"], "Fish at dawn.")
+        openai.assert_called_once_with(api_key="sk-test-openai-key")
 
     @patch("routers.forecast_router.OpenAI")
-    @patch("routers.forecast_router.has_active_subscription", return_value=True)
-    def test_ai_worker_uses_secret_values_loaded_at_startup(
-        self, has_active_subscription, openai
-    ):
+    def test_ai_worker_uses_secret_values_loaded_at_startup(self, openai):
         job = {"status": "pending", "user_id": "subscriber-1"}
         request = Mock(
             app=Mock(
@@ -362,7 +383,6 @@ class ForecastRouteTests(unittest.TestCase):
         )
         self.assertEqual(job["status"], "completed")
         self.assertEqual(job["ai_evaluation"], "Fish at dawn.")
-        has_active_subscription.assert_called_once_with("subscriber-1")
 
     def test_openapi_registers_current_forecast_contract(self):
         schema = app.openapi()

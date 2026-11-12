@@ -19,6 +19,7 @@
     <title>Tidal Fishin' Time</title>
     <link rel="stylesheet" href="/static/common.css">
     <script src="/billing/navigation.js" defer></script>
+    <script src="/billing/client.js" defer></script>
     <style>
         .panel h2 { margin: 0 0 7px; font-size: 1.35rem; }
         .panel-copy { margin: 0 0 24px; color: var(--muted); }
@@ -321,7 +322,9 @@
             <div id="evaluation" aria-live="polite">
                 <h3>Your AI fishing guide says:</h3>
                 <p>AI fishing recommendations are available to active subscribers.</p>
-                <a href="/billing/subscribe">View subscription options</a>
+                <a href="/billing/account?signin=1" data-direct-signin>Sign in</a>
+                <span> or </span>
+                <a href="/billing/subscribe">Create account</a>
             </div>
         </section>
 
@@ -343,16 +346,16 @@
         const DEFAULT_STATE = "FL";
         const DEFAULT_STATION = "Fort Lauderdale, Andrews Ave. Bridge";
         const forecastStorageKey = "fishintime_last_forecast";
+        const signedOutStorageKey = "fishintime_signed_out";
         let signedInUser = null;
-        let activeSubscriber = false;
         let activeEvaluationRequest = 0;
         let evaluationProgressTimer = null;
 
-        function showSubscriberNotice() {
+        function showAiAvailabilityNotice() {
             const heading = document.createElement("h3");
             heading.textContent = "Your AI fishing guide says:";
             const message = document.createElement("p");
-            if (signedInUser && activeSubscriber) {
+            if (signedInUser) {
                 message.textContent = "Your AI response may take some time";
                 evaluation.replaceChildren(heading, message);
                 return;
@@ -360,17 +363,45 @@
 
             message.textContent =
                 "AI fishing recommendations are available to active subscribers.";
-            const link = document.createElement("a");
-            link.href = "/billing/subscribe";
-            link.textContent = "View subscription options";
-            evaluation.replaceChildren(heading, message, link);
+            const signInLink = document.createElement("a");
+            signInLink.href = "/billing/account?signin=1";
+            signInLink.dataset.directSignin = "";
+            signInLink.textContent = "Sign in";
+            const separator = document.createTextNode(" or ");
+            const createAccountLink = document.createElement("a");
+            createAccountLink.href = "/billing/subscribe";
+            createAccountLink.textContent = "Create account";
+            evaluation.replaceChildren(
+                heading,
+                message,
+                signInLink,
+                separator,
+                createAccountLink
+            );
         }
+
+        function clearForecastAfterSignOut() {
+            if (sessionStorage.getItem(signedOutStorageKey) !== "true") return;
+            sessionStorage.removeItem(signedOutStorageKey);
+            sessionStorage.removeItem(forecastStorageKey);
+            stopEvaluationProgress();
+            activeEvaluationRequest += 1;
+            forecastResult.replaceChildren();
+            forecastForm.reset();
+            stateSelect.value = DEFAULT_STATE;
+            dateSelect.value = "";
+            loadStations(DEFAULT_STATE, DEFAULT_STATION);
+            showAiAvailabilityNotice();
+        }
+
+        window.addEventListener("pageshow", event => {
+            if (event.persisted) clearForecastAfterSignOut();
+        });
 
         window.addEventListener("fishintime:auth-state-changed", event => {
             signedInUser = event.detail?.account || null;
-            activeSubscriber = event.detail?.activeSubscriber === true;
             if (forecastResult.childElementCount === 0) {
-                showSubscriberNotice();
+                showAiAvailabilityNotice();
             }
         });
 
@@ -1287,7 +1318,7 @@
                     }
                 });
             } else {
-                showSubscriberNotice();
+                showAiAvailabilityNotice();
             }
         }
 
@@ -1426,7 +1457,7 @@
             forecastSubmit.disabled = true;
             forecastResult.textContent = "Loading forecast...";
             const requestId = ++activeEvaluationRequest;
-            showSubscriberNotice();
+            showAiAvailabilityNotice();
 
             const params = new URLSearchParams({
                 city: citySelect.value,
@@ -1468,7 +1499,7 @@
                     });
                 } else {
                     stopEvaluationProgress();
-                    showSubscriberNotice();
+                    showAiAvailabilityNotice();
                 }
 
             } catch (error) {
@@ -1498,6 +1529,7 @@
         }
 
         // Initialize application
+        clearForecastAfterSignOut();
         loadStates();
     </script>
 </body>

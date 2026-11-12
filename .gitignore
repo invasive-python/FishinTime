@@ -3,6 +3,9 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.terraform
+*.tfstate
+*.tfstate.*
 ai_docs/
 node_modules
 .cache.sqlite

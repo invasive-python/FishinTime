@@ -5,28 +5,31 @@ This Terraform project reconstructs the FishinTime infrastructure from the prior
 - Region `us-east-2` (Ohio)
 - Public Application Load Balancer on HTTP port 80 (redirects to HTTPS) and HTTPS port 443
 - ACM-managed public TLS certificate for `api.<domain_name>`, validated through Route 53
-- Route 53 alias record for the API hostname
+- Route 53 alias records for the apex application hostname and the API compatibility hostname
 - ECS Fargate service with one task by default, 256 CPU / 512 MiB
 - FastAPI/Uvicorn container on port 8000; ALB health check `/health`, HTTP 200
 - ECR repository `fishintime-backend`
 - CloudWatch log group `/ecs/fishintime-backend`
 - Separate ECS execution and application task roles
 - Secrets Manager secrets for OpenAI, Cognito billing, and Stripe
-- DynamoDB billing records used for Stripe customers and subscription entitlements
+- Separate DynamoDB billing tables for live and sandbox Stripe customers and subscriptions
 
-The Stripe subscription prices are configurable with
+The live Stripe subscription prices are configurable with
 `stripe_monthly_amount_cents` (default `99`) and
 `stripe_annual_amount_cents` (default `999`). The application creates monthly
 and annual recurring prices directly at Stripe Checkout from these values.
-The Cognito callback and logout URL lists must include
-`${app_base_url}/billing/account`; by default `app_base_url` is
-`https://api.tidalfishintime.com`.
+The app and Cognito callback/logout URLs use the apex hostname
+`${app_base_url}/` (by default `https://tidalfishintime.com/`). The API
+compatibility hostname `https://api.tidalfishintime.com` remains available for
+existing integrations. Keep
+`${app_base_url}/billing/account` in the lists as well for compatibility with
+older sign-in links.
 
 ## Before you start
 
 1. This creates resources in the AWS account selected by your CLI credentials. Verify the account first.
 2. The OpenAI, agent ID, and Stripe webhook secret containers are created without values. Add values outside Terraform so secrets are not embedded in configuration or state.
-3. OpenAI, agent ID, and Stripe API secrets may be JSON objects with `OPENAI_API_KEY`, `AGENT_ID`, and `FishinSecret_Stripe_API` fields, respectively. The Stripe field must contain a test-mode key; plain-text values remain supported.
+3. OpenAI, agent ID, and live Stripe API secrets may be JSON objects with `OPENAI_API_KEY`, `AGENT_ID`, and `FishinSecret_Stripe_API_Key` fields, respectively. The live secret is named `FishinSecret_Stripe_API`; the retained sandbox secret is named `FishinSecret_Stripe_API_Key` and stores its key under the `FishinSecret_Stripe_API` field.
 4. Set `route53_zone_id` to the public Route 53 hosted zone that is authoritative for the registered domain. Confirm its name servers match `dig +short NS <domain>`; ACM validation records must be created in that delegated zone.
 5. Fargate tasks receive public IPs so they can call OpenAI, NOAA, and USNO without a NAT gateway. The task security group only allows inbound app traffic from the ALB.
 6. If a secret name is pending deletion from a prior attempt, AWS may prevent immediate reuse. Restore it or wait until its recovery window expires.
@@ -91,7 +94,26 @@ sudo docker push "${REPO}:latest"
 
 The prior Linux environment sometimes required `sudo docker` because the user did not have permission to access `/var/run/docker.sock`.
 
-## 4. Add secret values outside Terraform
+## 4. Deploy the pushed image
+
+Pushing the `latest` tag does not automatically replace the image used by
+running ECS tasks. Force a new deployment so ECS pulls the latest image, then
+wait for the service to become stable:
+
+```bash
+aws ecs update-service \
+  --cluster fishintime-cluster \
+  --service fishintime-backend-service \
+  --force-new-deployment \
+  --region "$AWS_REGION"
+
+aws ecs wait services-stable \
+  --cluster fishintime-cluster \
+  --services fishintime-backend-service \
+  --region "$AWS_REGION"
+```
+
+## 5. Add secret values outside Terraform
 
 Enter each complete JSON object at its hidden prompt, not as part of the
 command. The application expects the OpenAI secret to have an
@@ -124,41 +146,54 @@ history. The AWS CLI receives each value as a command-line argument, so avoid
 running this on a shared machine. AWS Secrets Manager stores the JSON object as
 the secret string; the application parses the expected field from it.
 
-The Stripe API secret already exists in this account. Terraform reads its ARN
-without managing or replacing the key. Confirm it contains the Stripe test-mode
-secret key, either as plain text or under the `FishinSecret_Stripe_API` JSON
-field. Terraform creates the webhook secret container; populate it with the
-test-mode endpoint's `whsec_...` signing secret.
+The live API key is read from `FishinSecret_Stripe_API`; local `--sandbox` runs
+use the retained `FishinSecret_Stripe_API_Key` secret. Stripe API keys start
+with `sk_live_` or `rk_live_` in live mode and `sk_test_` or `rk_test_` in a
+sandbox. A value starting with `prod_` is a Product ID, not an API key.
 
-The API key is read at app startup with
-`get_secret("FishinSecret_Stripe_API_Key")`; the webhook signing secret is loaded
-when Stripe sends a webhook. Configure Stripe in test mode to send
+Terraform creates a new live webhook secret container named
+`FishinTime_Stripe_Webhook_Secret_Live`; populate it with the signing secret
+from the live Stripe webhook endpoint. Keep the existing
+`FishinTime_Stripe_Webhook_Secret` for sandbox runs. Configure separate
+endpoints in Stripe, both sending
 `customer.subscription.created`, `customer.subscription.updated`, and
-`customer.subscription.deleted` to
+`customer.subscription.deleted` events to
 `https://api.<domain_name>/api/billing/webhook`.
 
 ```bash
-read -rsp "Stripe webhook signing secret: " STRIPE_WEBHOOK_SECRET
+read -rsp "Live Stripe webhook signing secret: " STRIPE_WEBHOOK_SECRET
 printf '\n'
 aws secretsmanager put-secret-value \
-  --secret-id FishinTime_Stripe_Webhook_Secret \
+  --secret-id FishinTime_Stripe_Webhook_Secret_Live \
   --secret-string "$STRIPE_WEBHOOK_SECRET" \
   --region "$AWS_REGION"
 unset STRIPE_WEBHOOK_SECRET
 ```
 
 In your Terraform variables, set both `cognito_callback_urls` and
-`cognito_logout_urls` to include the exact `app_base_url` plus
-`/billing/account`. For local development, also include
-`http://localhost:8000/billing/account` in both lists. Configure the Stripe
-amounts in cents as needed. For example, `99` is $0.99 and `999` is $9.99.
+`cognito_logout_urls` to include the exact `app_base_url` with a trailing `/`
+and `${app_base_url}/billing/account`. For local development, also include
+`http://localhost:8000/` and `http://localhost:8000/billing/account` in both
+lists. Configure the Stripe amounts in cents as needed. For example, `99` is
+$0.99 and `999` is $9.99.
 
-## 5. Plan and create the full stack
+Terraform also applies a Cognito classic hosted UI theme using FishinTime's
+teal and light backgrounds. Cognito only permits a limited set of CSS
+selectors and properties for this page, so it can match the app's palette and
+controls but not its full layout. The classic hosted UI does not provide a
+password-visibility toggle, and its CSS customization cannot add interactive
+behavior. A show-password control would require replacing the hosted page with
+a custom sign-in UI.
+
+## 6. Plan and create the full stack
 
 Confirm that the AWS CLI profile `fishintime-757` selects account
 `757266935832`. The default API hostname is
-`api.tidalfishintime.com`; override `domain_name` and `route53_zone_id` if your
-registered domain or authoritative hosted zone differs.
+`tidalfishintime.com`; override `domain_name` and `route53_zone_id` if your
+registered apex domain or authoritative hosted zone differs. The Terraform
+plan will add an apex A-alias to the load balancer while preserving the
+`api.` alias. If an apex A record already exists outside Terraform, reconcile
+that record before applying to avoid a Route 53 record conflict.
 
 ```bash
 aws sts get-caller-identity --profile fishintime-757
@@ -180,7 +215,7 @@ Review the plan carefully, especially the account, public networking, and any re
 terraform apply fishintime.tfplan
 ```
 
-## 6. Verify the deployment
+## 7. Verify the deployment
 
 ```bash
 terraform output -raw load_balancer_url
@@ -212,13 +247,16 @@ terraform output -raw cognito_client_id
 terraform output -raw cognito_issuer
 terraform output -raw cognito_login_domain
 terraform output -raw billing_table_name
+terraform output -raw billing_live_table_name
 ```
 
 Set those values as `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_ID`,
-`COGNITO_ISSUER`, `COGNITO_LOGIN_DOMAIN`, and `BILLING_TABLE_NAME`. Keep
-`APP_BASE_URL=http://localhost:8000` for local runs; the VS Code launch
-configuration loads `.env`. For deployed tasks, Terraform sets the public
-`app_base_url` and resource outputs directly.
+`COGNITO_ISSUER`, `COGNITO_LOGIN_DOMAIN`, and `BILLING_TABLE_NAME` (the sandbox
+table). For local live runs, set `BILLING_TABLE_NAME_LIVE` to the live table
+output; the application defaults to appending `-live` to `BILLING_TABLE_NAME`
+when this variable is absent. Keep `APP_BASE_URL=http://localhost:8000` for
+local runs; the VS Code launch configuration loads `.env`. For deployed tasks,
+Terraform sets the public `app_base_url` and live resource outputs directly.
 
 ## What this template reconstructs—and what it cannot know
 

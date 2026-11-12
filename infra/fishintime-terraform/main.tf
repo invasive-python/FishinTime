@@ -322,6 +322,18 @@ resource "aws_route53_record" "api" {
   }
 }
 
+resource "aws_route53_record" "root" {
+  zone_id = data.aws_route53_zone.authoritative.zone_id
+  name    = var.domain_name
+  type    = "A"
+
+  alias {
+    name                   = aws_lb.main.dns_name
+    zone_id                = aws_lb.main.zone_id
+    evaluate_target_health = true
+  }
+}
+
 resource "aws_ecs_task_definition" "backend" {
   family                   = "${local.name}-backend"
   requires_compatibilities = ["FARGATE"]
@@ -345,6 +357,8 @@ resource "aws_ecs_task_definition" "backend" {
       { name = "AWS_DEFAULT_REGION", value = var.aws_region },
       { name = "AWS_SECRET_NAME", value = "FishinSecret" },
       { name = "BILLING_TABLE_NAME", value = aws_dynamodb_table.billing.name },
+      { name = "BILLING_TABLE_NAME_LIVE", value = aws_dynamodb_table.billing_live.name },
+      { name = "STRIPE_MODE", value = "live" },
       { name = "COGNITO_REGION", value = var.aws_region },
       { name = "COGNITO_USER_POOL_ID", value = aws_cognito_user_pool.users.id },
       { name = "COGNITO_CLIENT_ID", value = aws_cognito_user_pool_client.website.id },

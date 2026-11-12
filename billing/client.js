@@ -113,7 +113,10 @@
     window.dispatchEvent(new CustomEvent("fishintime:auth-changed"));
     const pendingPlan = sessionStorage.getItem(pendingPlanStorageKey);
     if (pendingPlan !== "monthly" && pendingPlan !== "annual") {
-      window.location.replace(new URL("/", config.redirect_uri));
+      const callbackUrl = new URL(config.redirect_uri);
+      if (window.location.pathname !== callbackUrl.pathname) {
+        window.location.replace(callbackUrl);
+      }
       return true;
     }
     return false;
@@ -175,7 +178,7 @@
   }
 
   async function createCheckout(plan) {
-    message.textContent = "Opening secure checkout…";
+    if (message) message.textContent = "Opening secure checkout…";
     const result = await requestApi("/api/billing/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -194,6 +197,8 @@
   async function signOut() {
     clearAccessToken();
     sessionStorage.removeItem(pendingPlanStorageKey);
+    sessionStorage.removeItem("fishintime_last_forecast");
+    sessionStorage.setItem("fishintime_signed_out", "true");
     window.dispatchEvent(new CustomEvent("fishintime:auth-changed"));
     const logout = new URL(`${config.login_domain}/logout`);
     logout.search = new URLSearchParams({
@@ -356,7 +361,16 @@
         clearOAuthValues();
         sessionStorage.removeItem(oauthStateRetryStorageKey);
       }
-      message.textContent = error.message;
+      if (message) {
+        message.textContent = error.message;
+      } else {
+        const status = document.createElement("p");
+        status.className = "billing-message";
+        status.setAttribute("role", "alert");
+        status.textContent = error.message;
+        document.querySelector(".masthead")?.append(status);
+      }
+      document.documentElement.classList.remove("oauth-navigation-pending");
       if (signInButton) {
         signInButton.hidden = false;
         signInButton.textContent = getAccessToken()

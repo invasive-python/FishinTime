@@ -2,11 +2,11 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run API",
+      "name": "Run API (live)",
       "type": "debugpy",
       "request": "launch",
-      "module": "uvicorn",
-      "args": ["api:app", "--reload"],
+      "program": "${workspaceFolder}/run.py",
+      "args": [],
       "python": "${workspaceFolder}/.venv/bin/python",
       "envFile": "${workspaceFolder}/.env",
       "env": {
@@ -17,11 +17,42 @@
       "justMyCode": true
     },
     {
-      "name": "Debug API",
+      "name": "Run API (sandbox)",
       "type": "debugpy",
       "request": "launch",
-      "module": "uvicorn",
-      "args": ["api:app", "--reload"],
+      "program": "${workspaceFolder}/run.py",
+      "args": ["--sandbox"],
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "AWS_PROFILE": "fishintime-757",
+        "AWS_REGION": "us-east-2"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Debug API (live)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/run.py",
+      "args": [],
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "AWS_PROFILE": "fishintime-757",
+        "AWS_REGION": "us-east-2"
+      },
+      "console": "integratedTerminal",
+      "subProcess": true,
+      "justMyCode": true
+    },
+    {
+      "name": "Debug API (sandbox)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/run.py",
+      "args": ["--sandbox"],
       "python": "${workspaceFolder}/.venv/bin/python",
       "envFile": "${workspaceFolder}/.env",
       "env": {

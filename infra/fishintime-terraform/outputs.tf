@@ -11,7 +11,12 @@ output "ecr_repository_url" {
 }
 
 output "load_balancer_url" {
-  value = "https://${local.api_domain}"
+  value = "https://${var.domain_name}"
+}
+
+output "api_load_balancer_url" {
+  description = "Compatibility hostname for existing API integrations."
+  value       = "https://${local.api_domain}"
 }
 
 output "api_domain_name" {

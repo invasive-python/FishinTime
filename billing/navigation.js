@@ -4,7 +4,6 @@
   ).replace(/\/+$/, "");
   const tokenStorageKey = "fishintime_access_token";
   const navigation = document.querySelector("[data-site-navigation]");
-  if (!navigation) return;
 
   const links = [
     { href: "/", label: "Forecast", paths: ["/"] },
@@ -107,14 +106,20 @@
 
       const account = await response.json();
       let activeSubscriber = false;
-      const statusResponse = await fetch(`${apiBase}/api/billing/status`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (statusResponse.ok) {
-        const status = await statusResponse.json();
-        activeSubscriber = status.active === true;
-      } else if (statusResponse.status !== 401) {
-        throw new Error(`Subscription check failed (${statusResponse.status}).`);
+      try {
+        const statusResponse = await fetch(`${apiBase}/api/billing/status`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (statusResponse.ok) {
+          const status = await statusResponse.json();
+          activeSubscriber = status.active === true;
+        } else if (statusResponse.status !== 401) {
+          throw new Error(
+            `Subscription check failed (${statusResponse.status}).`,
+          );
+        }
+      } catch (error) {
+        console.error("Unable to check subscription status:", error);
       }
 
       renderNavigation(account);
@@ -134,10 +139,75 @@
     }
   }
 
-  renderNavigation();
-  getAccount();
-  window.addEventListener("fishintime:auth-changed", getAccount);
-  window.addEventListener("storage", event => {
-    if (event.key === tokenStorageKey) getAccount();
+  if (navigation) {
+    renderNavigation();
+    getAccount();
+    window.addEventListener("fishintime:auth-changed", getAccount);
+    window.addEventListener("storage", event => {
+      if (event.key === tokenStorageKey) getAccount();
+    });
+  }
+
+  document.addEventListener("click", async event => {
+    const link = event.target.closest("[data-direct-signin]");
+    if (!link) return;
+    event.preventDefault();
+    try {
+      const configResponse = await fetch(`${apiBase}/api/billing/config`);
+      const config = await configResponse.json();
+      if (!configResponse.ok) {
+        throw new Error(config.detail || "Sign-in is unavailable.");
+      }
+
+      const callbackOrigin = new URL(config.redirect_uri).origin;
+      if (window.location.origin !== callbackOrigin) {
+        const canonicalCallback = new URL(config.redirect_uri);
+        canonicalCallback.searchParams.set("signin", "1");
+        window.location.assign(canonicalCallback);
+        return;
+      }
+
+      const encode = bytes => {
+        let binary = "";
+        bytes.forEach(byte => { binary += String.fromCharCode(byte); });
+        return btoa(binary)
+          .replace(/\+/g, "-")
+          .replace(/\//g, "_")
+          .replace(/=+$/, "");
+      };
+      const verifierBytes = new Uint8Array(32);
+      const stateBytes = new Uint8Array(32);
+      crypto.getRandomValues(verifierBytes);
+      crypto.getRandomValues(stateBytes);
+      const verifier = encode(verifierBytes);
+      const state = encode(stateBytes);
+      const digest = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(verifier)
+      );
+
+      sessionStorage.setItem("fishintime_pkce_verifier", verifier);
+      sessionStorage.setItem("fishintime_oauth_state", state);
+      const authorization = new URL(
+        `${config.login_domain}/oauth2/authorize`
+      );
+      authorization.search = new URLSearchParams({
+        response_type: "code",
+        client_id: config.client_id,
+        redirect_uri: config.redirect_uri,
+        scope: "openid email profile aws.cognito.signin.user.admin",
+        state,
+        code_challenge: encode(new Uint8Array(digest)),
+        code_challenge_method: "S256",
+      });
+      window.location.assign(authorization);
+    } catch (error) {
+      console.error("Unable to start sign-in directly:", error);
+      const status = document.createElement("p");
+      status.className = "billing-message";
+      status.setAttribute("role", "alert");
+      status.textContent = error.message;
+      link.insertAdjacentElement("afterend", status);
+    }
   });
 })();

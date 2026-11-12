@@ -1,0 +1,12 @@
+app_base_url    = ""
+route53_zone_id = ""
+
+cognito_callback_urls = [
+  "http://localhost:8000/",
+]
+
+cognito_domain_prefix = ""
+
+cognito_logout_urls = [
+  "http://localhost:8000/",
+]
