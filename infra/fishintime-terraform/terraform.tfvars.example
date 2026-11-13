@@ -1,5 +1,5 @@
 app_base_url    = ""
-route53_zone_id = ""
+route53_zone_id = "Z095566824HCVZH7AIR9D"
 
 cognito_callback_urls = [
   "http://localhost:8000/",

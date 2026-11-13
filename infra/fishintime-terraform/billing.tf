@@ -64,7 +64,6 @@ resource "aws_cognito_user_pool" "users" {
     developer_only_attribute = false
     mutable                  = true
     required                 = false
-
     string_attribute_constraints {}
   }
 
@@ -74,7 +73,6 @@ resource "aws_cognito_user_pool" "users" {
     developer_only_attribute = false
     mutable                  = true
     required                 = false
-
     string_attribute_constraints {}
   }
 
@@ -84,7 +82,6 @@ resource "aws_cognito_user_pool" "users" {
     developer_only_attribute = false
     mutable                  = true
     required                 = false
-
     string_attribute_constraints {}
   }
 
@@ -216,6 +213,7 @@ resource "aws_secretsmanager_secret" "stripe_webhook_secret_live" {
   tags                    = local.common_tags
 }
 
+# IAM permissions used by the ECS task role.
 resource "aws_iam_role_policy" "task_billing_table" {
   name = "${local.name}-billing-table"
   role = aws_iam_role.task.id

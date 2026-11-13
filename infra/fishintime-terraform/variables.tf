@@ -1,28 +1,65 @@
-variable "aws_region" {
-  description = "AWS region for the FishinTime deployment."
-  type        = string
-  default     = "us-east-2"
-}
-
-variable "project_name" {
-  description = "Prefix used for AWS resource names."
-  type        = string
-  default     = "fishintime"
-}
-
-variable "domain_name" {
-  description = "Registered apex domain with a public Route 53 hosted zone."
-  type        = string
-  default     = "tidalfishintime.com"
-}
-
+variable "aws_region" { type = string }
+variable "aws_secret_name" { type = string }
+variable "stripe_mode" { type = string }
+variable "stripe_annual_amount_cents" { type = string }
+variable "stripe_monthly_amount_cents" { type = string }
+variable "billing_table_name" { type = string }
+variable "billing_table_name_live" { type = string }
+variable "cognito_issuer" { type = string }
+variable "cognito_user_pool_id" { type = string }
+variable "cognito_region" { type = string }
+variable "cognito_login_domain" { type = string }
+variable "cognito_client_id" { type = string }
+variable "app_base_url" { type = string }
+variable "project_name" { type = string }
+variable "domain_name" { type = string }
+variable "cognito_domain_prefix" { type = string }
+variable "cognito_callback_urls" { type = list(string) }
+variable "cognito_logout_urls" { type = list(string) }
 variable "route53_zone_id" {
-  description = "ID of the public Route 53 hosted zone delegated by the registered domain."
+  description = "Public Route 53 hosted zone containing the custom domains."
   type        = string
+  default     = "Z095566824HCVZH7AIR9D"
+}
+
+variable "express_load_balancer_name" {
+  description = "Name of the ALB created by the deployed ECS Express service."
+  type        = string
+  default     = "ecs-express-gateway-alb-8880ca06"
+}
+
+variable "express_https_listener_arn" {
+  description = "HTTPS listener ARN managed by the deployed ECS Express service."
+  type        = string
+  default     = "arn:aws:elasticloadbalancing:us-east-2:757266935832:listener/app/ecs-express-gateway-alb-8880ca06/9b875a09628b6e51/b6811da502b61878"
+}
+
+variable "express_custom_domain_certificate_arn" {
+  description = "Issued ACM certificate ARN covering the apex and API hostnames."
+  type        = string
+  default     = "arn:aws:acm:us-east-2:757266935832:certificate/6a65965d-5b54-40f7-be38-72c013106d2e"
+}
+
+variable "express_listener_rule_arn" {
+  description = "Existing Express listener rule to import and manage."
+  type        = string
+  default     = "arn:aws:elasticloadbalancing:us-east-2:757266935832:listener-rule/app/ecs-express-gateway-alb-8880ca06/9b875a09628b6e51/b6811da502b61878/dedd104d95ec9b2d"
+}
+
+variable "express_zero_weight_target_group_arn" {
+  description = "Existing Express listener rule target group with weight zero."
+  type        = string
+  default     = "arn:aws:elasticloadbalancing:us-east-2:757266935832:targetgroup/ecs-gateway-tg-ac28266a63b7ef9f3/047da1d1376a3f5c"
+}
+
+variable "express_active_target_group_arn" {
+  description = "Existing active Express listener rule target group."
+  type        = string
+  default     = "arn:aws:elasticloadbalancing:us-east-2:757266935832:targetgroup/ecs-gateway-tg-52d946b667364ecbb/4387585bd0d8ceaa"
 }
 
 variable "container_image_tag" {
-  description = "ECR image tag to deploy. Push this tag before applying if the service is being created for the first time."
+  description = "Immutable ECR image tag deployed by ECS Express Mode."
   type        = string
   default     = "latest"
 }
@@ -33,37 +70,32 @@ variable "container_port" {
 }
 
 variable "task_cpu" {
-  description = "Fargate CPU units."
+  description = "Fargate CPU units for the Express service."
   type        = number
   default     = 256
 }
 
 variable "task_memory" {
-  description = "Fargate memory in MiB."
+  description = "Fargate memory in MiB for the Express service."
   type        = number
   default     = 512
-}
-
-variable "desired_count" {
-  type    = number
-  default = 1
-}
-
-variable "allowed_http_cidr" {
-  description = "CIDR allowed to reach the HTTP-to-HTTPS redirect listener."
-  type        = string
-  default     = "0.0.0.0/0"
-}
-
-variable "allowed_https_cidr" {
-  description = "CIDR allowed to access the public HTTPS API."
-  type        = string
-  default     = "0.0.0.0/0"
 }
 
 variable "health_check_path" {
   type    = string
   default = "/health"
+}
+
+variable "min_task_count" {
+  description = "Minimum number of Express service tasks."
+  type        = number
+  default     = 1
+}
+
+variable "max_task_count" {
+  description = "Maximum number of Express service tasks. Kept at one by default to preserve current capacity."
+  type        = number
+  default     = 1
 }
 
 variable "secret_openai_name" {
@@ -74,47 +106,4 @@ variable "secret_openai_name" {
 variable "secret_agent_id_name" {
   type    = string
   default = "FishinSecret_Agent_Id"
-}
-
-variable "cognito_domain_prefix" {
-  description = "Globally unique Cognito hosted-domain prefix."
-  type        = string
-}
-
-variable "cognito_callback_urls" {
-  description = "Exact allowed sign-in callback URLs."
-  type        = list(string)
-}
-
-variable "cognito_logout_urls" {
-  description = "Exact allowed sign-out URLs."
-  type        = list(string)
-}
-
-variable "stripe_monthly_amount_cents" {
-  type        = number
-  description = "Monthly FishinTime subscription price in USD cents."
-  default     = 99
-
-  validation {
-    condition     = var.stripe_monthly_amount_cents > 0 && floor(var.stripe_monthly_amount_cents) == var.stripe_monthly_amount_cents
-    error_message = "The monthly subscription amount must be a positive whole number of cents."
-  }
-}
-
-variable "stripe_annual_amount_cents" {
-  type        = number
-  description = "Annual FishinTime subscription price in USD cents."
-  default     = 999
-
-  validation {
-    condition     = var.stripe_annual_amount_cents > 0 && floor(var.stripe_annual_amount_cents) == var.stripe_annual_amount_cents
-    error_message = "The annual subscription amount must be a positive whole number of cents."
-  }
-}
-
-variable "app_base_url" {
-  type        = string
-  description = "Public HTTPS apex URL used for the app, billing redirects, and Cognito callbacks, without a trailing slash."
-  default     = "https://tidalfishintime.com"
 }

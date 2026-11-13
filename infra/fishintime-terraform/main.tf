@@ -1,6 +1,6 @@
 provider "aws" {
   region              = var.aws_region
-  profile             = "fishintime-757"
+  profile             = "fishintime-nonroot"
   allowed_account_ids = ["757266935832"]
 }
 
@@ -19,43 +19,8 @@ locals {
   }
 }
 
-data "aws_route53_zone" "authoritative" {
-  zone_id = var.route53_zone_id
-}
-
-resource "aws_acm_certificate" "api" {
-  domain_name       = local.api_domain
-  validation_method = "DNS"
-  tags              = local.common_tags
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-data "aws_acm_certificate" "root_domain" {
-  domain      = var.domain_name
-  statuses    = ["ISSUED"]
-  most_recent = true
-}
-
-resource "aws_route53_record" "certificate_validation" {
-  for_each = toset([local.api_domain])
-
-  allow_overwrite = true
-  name            = one(aws_acm_certificate.api.domain_validation_options).resource_record_name
-  records         = [one(aws_acm_certificate.api.domain_validation_options).resource_record_value]
-  ttl             = 60
-  type            = one(aws_acm_certificate.api.domain_validation_options).resource_record_type
-  zone_id         = data.aws_route53_zone.authoritative.zone_id
-}
-
-resource "aws_acm_certificate_validation" "api" {
-  certificate_arn         = aws_acm_certificate.api.arn
-  validation_record_fqdns = [for record in aws_route53_record.certificate_validation : record.fqdn]
-}
-
-# Networking: two public subnets in separate availability zones.
+# ECS Express Mode manages its own load balancer, listener, target group, task
+# security groups, service, and scaling resources.
 resource "aws_vpc" "main" {
   cidr_block           = "10.40.0.0/16"
   enable_dns_support   = true
@@ -96,83 +61,15 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-# Security groups: public HTTP/HTTPS to ALB; only the ALB can reach the app container.
-resource "aws_security_group" "alb" {
-  name        = "${local.name}-alb-sg"
-  description = "Allow HTTP traffic to the FishinTime load balancer"
-  vpc_id      = aws_vpc.main.id
-  tags        = merge(local.common_tags, { Name = "${local.name}-alb-sg" })
-}
-
-resource "aws_vpc_security_group_ingress_rule" "alb_http" {
-  security_group_id = aws_security_group.alb.id
-  description       = "HTTP from allowed CIDR"
-  cidr_ipv4         = var.allowed_http_cidr
-  from_port         = 80
-  to_port           = 80
-  ip_protocol       = "tcp"
-}
-
-resource "aws_vpc_security_group_ingress_rule" "alb_https" {
-  security_group_id = aws_security_group.alb.id
-  cidr_ipv4         = var.allowed_https_cidr
-  from_port         = 443
-  to_port           = 443
-  ip_protocol       = "tcp"
-}
-
-resource "aws_vpc_security_group_egress_rule" "alb_all_outbound" {
-  security_group_id = aws_security_group.alb.id
-  cidr_ipv4         = "0.0.0.0/0"
-  ip_protocol       = "-1"
-}
-
-resource "aws_security_group" "task" {
-  name        = "${local.name}-task-sg"
-  description = "Allow app traffic only from the FishinTime ALB"
-  vpc_id      = aws_vpc.main.id
-  tags        = merge(local.common_tags, { Name = "${local.name}-task-sg" })
-}
-
-resource "aws_vpc_security_group_ingress_rule" "task_from_alb" {
-  security_group_id            = aws_security_group.task.id
-  referenced_security_group_id = aws_security_group.alb.id
-  description                  = "App port from ALB"
-  from_port                    = var.container_port
-  to_port                      = var.container_port
-  ip_protocol                  = "tcp"
-}
-
-resource "aws_vpc_security_group_egress_rule" "task_all_outbound" {
-  security_group_id = aws_security_group.task.id
-  cidr_ipv4         = "0.0.0.0/0"
-  ip_protocol       = "-1"
-}
-
-# ECR repository for the backend container image.
 resource "aws_ecr_repository" "backend" {
   name                 = "${local.name}-backend"
   image_tag_mutability = "MUTABLE"
+
   image_scanning_configuration {
     scan_on_push = true
   }
+
   tags = local.common_tags
-}
-
-# Secrets are created empty. Populate them after apply using the AWS CLI;
-# secret values are intentionally not placed in Terraform state/configuration.
-resource "aws_secretsmanager_secret" "openai" {
-  name                    = var.secret_openai_name
-  description             = "FishinTime OpenAI API key; set its value outside Terraform."
-  recovery_window_in_days = 7
-  tags                    = local.common_tags
-}
-
-resource "aws_secretsmanager_secret" "agent_id" {
-  name                    = var.secret_agent_id_name
-  description             = "FishinTime OpenAI agent ID; set its value outside Terraform."
-  recovery_window_in_days = 7
-  tags                    = local.common_tags
 }
 
 resource "aws_cloudwatch_log_group" "backend" {
@@ -181,10 +78,10 @@ resource "aws_cloudwatch_log_group" "backend" {
   tags              = local.common_tags
 }
 
-# ECS task execution role: image pulls, CloudWatch logs, and ECS-managed operations.
 data "aws_iam_policy_document" "ecs_tasks_assume_role" {
   statement {
     actions = ["sts:AssumeRole"]
+
     principals {
       type        = "Service"
       identifiers = ["ecs-tasks.amazonaws.com"]
@@ -203,215 +100,161 @@ resource "aws_iam_role_policy_attachment" "execution_managed" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# App task role: boto3 in api.py can read the two named secrets.
+resource "aws_iam_role" "infrastructure" {
+  name = "${local.name}-express-infrastructure-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "ecs.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_role_policy_attachment" "infrastructure_managed" {
+  role       = aws_iam_role.infrastructure.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSInfrastructureRoleforExpressGatewayServices"
+}
+
 resource "aws_iam_role" "task" {
   name               = "${local.name}-task-role"
   assume_role_policy = data.aws_iam_policy_document.ecs_tasks_assume_role.json
   tags               = local.common_tags
 }
 
-resource "aws_iam_role_policy" "task_read_secrets" {
-  name = "${local.name}-read-secrets"
+resource "aws_iam_role_policy" "task_read_application_secrets" {
+  name = "${local.name}-read-application-secrets"
   role = aws_iam_role.task.id
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
       Effect = "Allow"
-      Action = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"]
+      Action = [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ]
       Resource = [
-        aws_secretsmanager_secret.openai.arn,
-        aws_secretsmanager_secret.agent_id.arn
+        "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${var.secret_openai_name}-*",
+        "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${var.secret_agent_id_name}-*"
       ]
     }]
   })
 }
 
-resource "aws_ecs_cluster" "main" {
-  name = "${local.name}-cluster"
-  setting {
-    name  = "containerInsights"
-    value = "enabled"
-  }
-  tags = local.common_tags
-}
-
-resource "aws_lb" "main" {
-  name               = "${local.name}-alb"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb.id]
-  subnets            = aws_subnet.public[*].id
-  tags               = local.common_tags
-}
-
-resource "aws_lb_target_group" "backend" {
-  name        = "${local.name}-backend-tg"
-  port        = var.container_port
-  protocol    = "HTTP"
-  target_type = "ip"
-  vpc_id      = aws_vpc.main.id
-
-  health_check {
-    enabled             = true
-    path                = var.health_check_path
-    protocol            = "HTTP"
-    matcher             = "200"
-    interval            = 30
-    timeout             = 5
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-  }
-
-  tags = local.common_tags
-}
-
-resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.main.arn
-  port              = 80
-  protocol          = "HTTP"
-  default_action {
-    type = "redirect"
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
-    }
-  }
-  tags = local.common_tags
-}
-
-resource "aws_lb_listener" "https" {
-  load_balancer_arn = aws_lb.main.arn
-  port              = 443
-  protocol          = "HTTPS"
-  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-Res-PQ-2025-09"
-  certificate_arn   = data.aws_acm_certificate.root_domain.arn
-
-  default_action {
-    type = "forward"
-    forward {
-      target_group {
-        arn    = aws_lb_target_group.backend.arn
-        weight = 1
-      }
-      stickiness {
-        enabled  = false
-        duration = 3600
-      }
-    }
-  }
-
-}
-
-resource "aws_lb_listener_certificate" "api" {
-  listener_arn    = aws_lb_listener.https.arn
-  certificate_arn = aws_acm_certificate.api.arn
-
-  depends_on = [aws_acm_certificate_validation.api]
-}
-
-resource "aws_route53_record" "api" {
-  zone_id = data.aws_route53_zone.authoritative.zone_id
-  name    = local.api_domain
-  type    = "A"
-
-  alias {
-    name                   = aws_lb.main.dns_name
-    zone_id                = aws_lb.main.zone_id
-    evaluate_target_health = true
-  }
-}
-
-resource "aws_route53_record" "root" {
-  zone_id = data.aws_route53_zone.authoritative.zone_id
-  name    = var.domain_name
-  type    = "A"
-
-  alias {
-    name                   = aws_lb.main.dns_name
-    zone_id                = aws_lb.main.zone_id
-    evaluate_target_health = true
-  }
-}
-
-resource "aws_ecs_task_definition" "backend" {
-  family                   = "${local.name}-backend"
-  requires_compatibilities = ["FARGATE"]
-  network_mode             = "awsvpc"
-  cpu                      = tostring(var.task_cpu)
-  memory                   = tostring(var.task_memory)
-  execution_role_arn       = aws_iam_role.execution.arn
-  task_role_arn            = aws_iam_role.task.arn
-
-  container_definitions = jsonencode([{
-    name      = "${local.name}-backend"
-    image     = "${aws_ecr_repository.backend.repository_url}:${var.container_image_tag}"
-    essential = true
-    portMappings = [{
-      containerPort = var.container_port
-      hostPort      = var.container_port
-      protocol      = "tcp"
-    }]
-    environment = [
-      { name = "AWS_REGION", value = var.aws_region },
-      { name = "AWS_DEFAULT_REGION", value = var.aws_region },
-      { name = "AWS_SECRET_NAME", value = "FishinSecret" },
-      { name = "BILLING_TABLE_NAME", value = aws_dynamodb_table.billing.name },
-      { name = "BILLING_TABLE_NAME_LIVE", value = aws_dynamodb_table.billing_live.name },
-      { name = "STRIPE_MODE", value = "live" },
-      { name = "COGNITO_REGION", value = var.aws_region },
-      { name = "COGNITO_USER_POOL_ID", value = aws_cognito_user_pool.users.id },
-      { name = "COGNITO_CLIENT_ID", value = aws_cognito_user_pool_client.website.id },
-      { name = "COGNITO_ISSUER", value = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.users.id}" },
-      { name = "COGNITO_LOGIN_DOMAIN", value = "https://${aws_cognito_user_pool_domain.website.domain}.auth.${var.aws_region}.amazoncognito.com" },
-      { name = "APP_BASE_URL", value = var.app_base_url },
-      { name = "STRIPE_MONTHLY_AMOUNT_CENTS", value = tostring(var.stripe_monthly_amount_cents) },
-      { name = "STRIPE_ANNUAL_AMOUNT_CENTS", value = tostring(var.stripe_annual_amount_cents) }
-    ]
-    logConfiguration = {
-      logDriver = "awslogs"
-      options = {
-        "awslogs-group"         = aws_cloudwatch_log_group.backend.name
-        "awslogs-region"        = var.aws_region
-        "awslogs-stream-prefix" = "ecs"
-      }
-    }
-  }])
-  tags = local.common_tags
-}
-
-resource "aws_ecs_service" "backend" {
-  name             = "${local.name}-backend-service"
-  cluster          = aws_ecs_cluster.main.id
-  task_definition  = aws_ecs_task_definition.backend.arn
-  desired_count    = var.desired_count
-  launch_type      = "FARGATE"
-  platform_version = "LATEST"
-
-  deployment_circuit_breaker {
-    enable   = true
-    rollback = true
-  }
+resource "aws_ecs_express_gateway_service" "backend" {
+  service_name            = "${local.name}-backend"
+  execution_role_arn      = aws_iam_role.execution.arn
+  infrastructure_role_arn = aws_iam_role.infrastructure.arn
+  task_role_arn           = aws_iam_role.task.arn
+  cpu                     = tostring(var.task_cpu)
+  memory                  = tostring(var.task_memory)
+  health_check_path       = var.health_check_path
+  wait_for_steady_state   = true
+  tags                    = local.common_tags
 
   network_configuration {
-    subnets          = aws_subnet.public[*].id
-    security_groups  = [aws_security_group.task.id]
-    assign_public_ip = true
+    subnets = aws_subnet.public[*].id
   }
 
-  load_balancer {
-    target_group_arn = aws_lb_target_group.backend.arn
-    container_name   = "${local.name}-backend"
-    container_port   = var.container_port
+  primary_container {
+    image          = "${aws_ecr_repository.backend.repository_url}:${var.container_image_tag}"
+    container_port = var.container_port
+
+    aws_logs_configuration {
+      log_group         = aws_cloudwatch_log_group.backend.name
+      log_stream_prefix = "ecs"
+    }
+
+    environment {
+      name  = "AWS_REGION"
+      value = var.aws_region
+    }
+
+    environment {
+      name  = "AWS_DEFAULT_REGION"
+      value = var.aws_region
+    }
+
+    environment {
+      name  = "AWS_SECRET_NAME"
+      value = var.aws_secret_name
+    }
+
+    environment {
+      name  = "STRIPE_MODE"
+      value = var.stripe_mode
+    }
+
+    environment {
+      name  = "STRIPE_ANNUAL_AMOUNT_CENTS"
+      value = var.stripe_annual_amount_cents
+    }
+
+    environment {
+      name  = "STRIPE_MONTHLY_AMOUNT_CENTS"
+      value = var.stripe_monthly_amount_cents
+    }
+
+    environment {
+      name  = "BILLING_TABLE_NAME"
+      value = var.billing_table_name
+    }
+
+    environment {
+      name  = "BILLING_TABLE_NAME_LIVE"
+      value = var.billing_table_name_live
+    }
+
+    environment {
+      name  = "COGNITO_ISSUER"
+      value = var.cognito_issuer
+    }
+
+    environment {
+      name  = "COGNITO_USER_POOL_ID"
+      value = var.cognito_user_pool_id
+    }
+
+    environment {
+      name  = "COGNITO_REGION"
+      value = var.cognito_region
+    }
+
+    environment {
+      name  = "COGNITO_LOGIN_DOMAIN"
+      value = var.cognito_login_domain
+    }
+
+    environment {
+      name  = "COGNITO_CLIENT_ID"
+      value = var.cognito_client_id
+    }
+
+    environment {
+      name  = "APP_BASE_URL"
+      value = var.app_base_url
+    }
+  }
+
+  scaling_target {
+    auto_scaling_metric       = "AVERAGE_CPU"
+    auto_scaling_target_value = 60
+    min_task_count            = var.min_task_count
+    max_task_count            = var.max_task_count
   }
 
   depends_on = [
-    aws_lb_listener.http,
+    aws_route.internet,
+    aws_route_table_association.public,
     aws_iam_role_policy_attachment.execution_managed,
-    aws_iam_role_policy.task_read_secrets,
+    aws_iam_role_policy_attachment.infrastructure_managed,
+    aws_iam_role_policy.task_read_application_secrets,
     aws_iam_role_policy.task_billing_table,
     aws_iam_role_policy.task_read_stripe_secrets,
   ]
-
-  tags = local.common_tags
 }
