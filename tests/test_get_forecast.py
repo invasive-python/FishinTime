@@ -14,6 +14,7 @@ from routers.forecast_router import (
     get_forecast,
 )
 from services.weather_service import _map_noaa_period
+from services.noaa_station_service import AmbiguousStationError
 
 
 class ForecastRouteTests(unittest.TestCase):
@@ -209,6 +210,38 @@ class ForecastRouteTests(unittest.TestCase):
         self.assertIn("External provider", raised.exception.detail)
         serve_forecast.assert_called_once()
 
+    @patch(
+        "routers.forecast_router.forecast_service.serve_forecast",
+        side_effect=AmbiguousStationError("Multiple stations; specify station_id."),
+    )
+    def test_ambiguous_station_name_is_reported_as_conflict(self, serve_forecast):
+        with self.assertRaises(HTTPException) as raised:
+            get_forecast(
+                request=Mock(),
+                background_tasks=BackgroundTasks(),
+                city="Same Name",
+                state="FL",
+                date=date.today().isoformat(),
+                user=None,
+            )
+        self.assertEqual(raised.exception.status_code, 409)
+
+    @patch("routers.forecast_router.forecast_service.serve_forecast")
+    def test_station_id_is_passed_to_forecast(self, serve_forecast):
+        serve_forecast.return_value = Mock()
+        get_forecast(
+            request=Mock(app=Mock(state=Mock(evaluation_jobs={}))),
+            background_tasks=BackgroundTasks(),
+            city="Same Name",
+            state="FL",
+            date=date.today().isoformat(),
+            user=None,
+            station_id="8724224",
+        )
+        serve_forecast.assert_called_once_with(
+            "Same Name", "FL", date.today().isoformat(), "8724224"
+        )
+
     @patch("routers.forecast_router.forecast_service.serve_forecast")
     def test_signed_in_user_receives_ai_evaluation(self, serve_forecast):
         forecast = Mock()
@@ -391,8 +424,9 @@ class ForecastRouteTests(unittest.TestCase):
             parameter["name"]: parameter for parameter in operation["parameters"]
         }
 
-        self.assertEqual(set(parameters), {"city", "state", "date"})
-        self.assertTrue(all(parameter["required"] for parameter in parameters.values()))
+        self.assertEqual(set(parameters), {"city", "state", "date", "station_id"})
+        self.assertTrue(all(parameters[name]["required"] for name in ("city", "state", "date")))
+        self.assertFalse(parameters["station_id"]["required"])
         response_reference = operation["responses"]["200"]["content"][
             "application/json"
         ]["schema"]["$ref"]

@@ -33,8 +33,10 @@ limits.
   applying; do not restore or apply an old state backup as part of this change.
 - The VPC uses `10.40.0.0/16`, matching the original ECS configuration. Confirm
   this range does not overlap with networks you need to connect.
-- The configuration does not create secret values. Keep the existing
-  application secrets populated in Secrets Manager.
+- Terraform creates the `FishinSecret_Geocode_API` Secrets Manager container and grants
+  the ECS task role access to it, but does not create secret values. After
+  applying, set the API key as a plain-text secret value in Secrets Manager.
+  Keep the existing application secrets populated there as well.
 
 ## 1. Verify account and initialize Terraform
 

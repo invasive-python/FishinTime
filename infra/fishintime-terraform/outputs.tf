@@ -61,3 +61,7 @@ output "openai_secret_name" {
 output "agent_id_secret_name" {
   value = var.secret_agent_id_name
 }
+
+output "geocode_api_secret_name" {
+  value = aws_secretsmanager_secret.fishinsecret_geocode_api.name
+}

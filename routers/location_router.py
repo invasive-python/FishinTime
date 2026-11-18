@@ -3,6 +3,7 @@ import requests
 from fastapi import APIRouter, HTTPException, Query
 
 from services.noaa_station_service import get_stations
+from services.station_county_service import get_station_county
 
 router = APIRouter()
 
@@ -45,13 +46,17 @@ def get_states() -> list[str]:
     )
 
 
-@router.get("/api/cities", response_model=list[dict[str, str]])
+@router.get("/api/cities", response_model=list[dict[str, str | None]])
 def get_cities_from_location(
     state: str = Query(..., description="The two-letter state code, e.g., FL"),
-) -> list[dict[str, str]]:
+) -> list[dict[str, str | None]]:
     """Returns only the stations/cities that belong to the selected state."""
     return [
-        {"id": station["id"], "name": station["name"]}
+        {
+            "id": station["id"],
+            "name": station["name"],
+            "county": get_station_county(station),
+        }
         for station in _get_stations()
         if isinstance(station.get("state"), str)
         and station["state"].upper() == state.upper()

@@ -126,6 +126,13 @@ resource "aws_iam_role" "task" {
   tags               = local.common_tags
 }
 
+resource "aws_secretsmanager_secret" "fishinsecret_geocode_api" {
+  name                    = var.fishinsecret_geocode_api_name
+  description             = "API key for geocoding service"
+  recovery_window_in_days = 7
+  tags                    = local.common_tags
+}
+
 resource "aws_iam_role_policy" "task_read_application_secrets" {
   name = "${local.name}-read-application-secrets"
   role = aws_iam_role.task.id
@@ -140,7 +147,8 @@ resource "aws_iam_role_policy" "task_read_application_secrets" {
       ]
       Resource = [
         "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${var.secret_openai_name}-*",
-        "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${var.secret_agent_id_name}-*"
+        "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${var.secret_agent_id_name}-*",
+        aws_secretsmanager_secret.fishinsecret_geocode_api.arn
       ]
     }]
   })

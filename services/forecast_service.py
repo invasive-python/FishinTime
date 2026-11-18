@@ -26,34 +26,33 @@ def _nested_lookup(mapping, *keys):
     return current
 
 
-def serve_forecast(city, state, date):
+def serve_forecast(city, state, date, station_id=None):
     parsed_date = _normalize_date(date)
     try:
-        city_norm = city.partition(",")[0].strip()
-        forecast = weather.get_forecast(city_norm, state, parsed_date)
-        city_data = city_service.get_city_data(city_norm, state)
-        if not city_data:
+        station = noaa_stations.get_station(city, state, station_id)
+        if station is None:
             return None
 
-        lat = city_data["latitude"]
-        long = city_data["longitude"]
-
+        city_lat = station.lat
+        city_long = station.lng
+        forecast = weather.get_forecast(city_lat, city_long, parsed_date)
+        city_data = {
+            "latitude": city_lat,
+            "longitude": city_long,
+            "timezone": forecast.timezone,
+        }
         location_timezone = city_service.get_location_timezone(city_data)
         phase_data = moon.get_moon_phase_from_city_data(city_data, parsed_date)
 
-        station_id = noaa_stations.get_station_id(city)
-        if station_id is None:
-            return None
-
         tide_data = tides.get_tides_from_station_id_and_dates(
-            station_id, parsed_date.isoformat()
+            station.id, parsed_date.isoformat()
         )
 
         waves_data = waves.get_waves_data(
-            lat, long, location_timezone, parsed_date
+            city_lat, city_long, location_timezone, parsed_date
         )
 
-        pressure_data = pressure.get_fishing_pressure_trend(lat, long)
+        pressure_data = pressure.get_fishing_pressure_trend(city_lat, city_long)
 
         if not forecast or not getattr(forecast, "periods", None):
             return None
@@ -101,7 +100,9 @@ def serve_forecast(city, state, date):
         )
 
         return ForecastResponse(
-            city=city,
+            city=station.name,
+            city_lat=str(city_lat),
+            city_long=str(city_long),
             date=str(parsed_date),
             precipitation_probability=int(precipitation),
             start_time=start_time,

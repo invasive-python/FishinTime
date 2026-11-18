@@ -1292,7 +1292,7 @@
             }
 
             stateSelect.value = savedState.state;
-            await loadStations(savedState.state, savedState.city);
+            await loadStations(savedState.state, savedState.station_id || savedState.city);
             dateSelect.value = savedState.date;
             forecastResult.replaceChildren(renderForecastTable(savedState.result));
 
@@ -1340,20 +1340,31 @@
                 if (!response.ok) {
                     throw new Error(`Failed to load stations: ${response.status}`);
                 }
-                const cities = (await response.json()).sort((a, b) =>
-                    a.name.localeCompare(b.name)
-                );
+                const cities = await response.json();
+                const counties = new Map();
 
                 cities.forEach(city => {
+                    const county = city.county || "County unavailable";
+                    if (!counties.has(county)) {
+                        const group = document.createElement("optgroup");
+                        group.label = county;
+                        counties.set(county, group);
+                    }
                     const option = document.createElement("option");
-                    option.value = city.name;
+                    option.value = city.id;
                     option.textContent = city.name;
-                    citySelect.appendChild(option);
+                    counties.get(county).appendChild(option);
                 });
 
+                [...counties.values()]
+                    .sort((a, b) => a.label.localeCompare(b.label))
+                    .forEach(group => citySelect.appendChild(group));
+
                 citySelect.disabled = cities.length === 0;
-                if (cities.some(city => city.name === defaultStation)) {
-                    citySelect.value = defaultStation;
+                const selected = cities.find(city => city.id === defaultStation)
+                    || cities.find(city => city.name === defaultStation);
+                if (selected) {
+                    citySelect.value = selected.id;
                 }
             } catch (error) {
                 console.error("Error fetching cities:", error);
@@ -1372,9 +1383,6 @@
                 ["precipitation_probability", "Chance of Precipitation"],
                 ["start_time", "Precipitation Starting Time (local)"],
                 ["temp", "Temperature"],
-                ["wind_speed_max", "Wind Speed (Max)"],
-                ["wind_speed_min", "Wind Speed (Min)"],
-                ["wind_direction", "Wind Direction"],
                 ["moon_current_phase", "Current Moon Phase"],
                 ["moon_brightness", "Moon Brightness"],
                 ["predictions", "Tides"],
@@ -1386,21 +1394,43 @@
                 ([key]) =>
                     key !== "ai_evaluation" &&
                     key !== "evaluation_id" &&
+                    key !== "city_lat" &&
+                    key !== "city_long" &&
                     key !== "moon_brightness" &&
                     key !== "moon_closest_phase" &&
                     key !== "moon_closest_phase_date"
             );
             const details = document.createElement("table");
+            const windFields = new Set(["wind_speed_min", "wind_speed_max", "wind_direction"]);
+            let windRendered = false;
 
             for (const [key, value] of entries) {
+                if (windFields.has(key) && windRendered) continue;
                 const row = document.createElement("tr");
                 const term = document.createElement("td");
                 term.setAttribute("style", "vertical-align: top;");
-                term.textContent = labels.get(key) || key;
+                term.textContent = windFields.has(key) ? "Wind" : labels.get(key) || key;
                 row.append(term);
 
                 const definition = document.createElement("td");
-                if (key === "pressure") {
+                if (windFields.has(key)) {
+                    windRendered = true;
+                    const min = result.wind_speed_min;
+                    const max = result.wind_speed_max;
+                    const hasMin = typeof min === "number" && Number.isFinite(min);
+                    const hasMax = typeof max === "number" && Number.isFinite(max);
+                    const speed = hasMin && hasMax && min !== max
+                        ? `${min.toFixed(2)} MPH (min) - ${max.toFixed(2)} MPH (max)`
+                        : hasMin
+                        ? `${min.toFixed(2)} MPH`
+                        : hasMax
+                        ? `${max.toFixed(2)} MPH`
+                        : "";
+                    const direction = typeof result.wind_direction === "string"
+                        ? result.wind_direction.trim()
+                        : "";
+                    definition.textContent = [direction, speed].filter(Boolean).join(" ") || "Unavailable";
+                } else if (key === "pressure") {
                     definition.append(renderPressureIndicator(value));
                 } else if (key === "moon_current_phase") {
                     definition.append(renderMoonPhase(value, result.moon_brightness));
@@ -1441,8 +1471,6 @@
                     const unit = {
                         precipitation_probability: "%",
                         temp: "°F",
-                        wind_speed_max: " MPH",
-                        wind_speed_min: " MPH",
                     }[key] || "";
                     definition.textContent = `${displayValue}${unit}`;
                 }
@@ -1460,8 +1488,10 @@
             const requestId = ++activeEvaluationRequest;
             showAiAvailabilityNotice();
 
+            const stationName = citySelect.selectedOptions[0].textContent;
             const params = new URLSearchParams({
-                city: citySelect.value,
+                city: stationName,
+                station_id: citySelect.value,
                 state: stateSelect.value,                
                 date: dateSelect.value,
             });
@@ -1478,7 +1508,8 @@
 
                 saveForecastState({
                     state: stateSelect.value,
-                    city: citySelect.value,
+                    city: stationName,
+                    station_id: citySelect.value,
                     date: dateSelect.value,
                     result,
                     aiEvaluation: null,

@@ -18,6 +18,8 @@ class ForecastResponseTests(unittest.TestCase):
         )
         response = ForecastResponse(
             city="Miami",
+            city_lat="25.76",
+            city_long="-80.19",
             date="2026-10-23",
             precipitation_probability=0,
             start_time="2026-10-23 06:00",

@@ -12,17 +12,21 @@ class LocationRouteTests(unittest.TestCase):
         {"name": "Missing station id", "state": "FL"},
     ]
 
+    @patch("routers.location_router.get_station_county")
     @patch("routers.location_router._get_stations")
-    def test_get_cities_returns_station_ids_and_names_for_state(self, get_stations):
+    def test_get_cities_returns_station_ids_and_names_for_state(
+        self, get_stations, get_station_county
+    ):
         get_stations.return_value = self.stations
+        get_station_county.side_effect = ["Miami-Dade County", None]
 
         result = get_cities_from_location("fl")
 
         self.assertEqual(
             result,
             [
-                {"id": "8723214", "name": "Virginia Key"},
-                {"id": "8724580", "name": "Key West"},
+                {"id": "8723214", "name": "Virginia Key", "county": "Miami-Dade County"},
+                {"id": "8724580", "name": "Key West", "county": None},
             ],
         )
 

@@ -17,6 +17,7 @@ from openai import OpenAI
 from billing.auth import get_optional_authenticated_user
 from models.weather_schemas import EvaluationJobResponse, ForecastResponse
 from services import forecast_service
+from services.noaa_station_service import AmbiguousStationError
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -40,6 +41,7 @@ def is_today_or_future(date_string: str, date_format: str = "%Y-%m-%d") -> bool:
     responses={
         400: {"description": "Date must be today or in the future."},
         404: {"description": "Forecast or NOAA tide station not found."},
+        409: {"description": "Station name is ambiguous; specify station_id."},
         502: {"description": "External provider request or response failed"}
     },
 )
@@ -52,12 +54,13 @@ def get_forecast(
     user: Annotated[
         dict[str, Any] | None, Depends(get_optional_authenticated_user)
     ],
+    station_id: str | None = None,
 ) -> ForecastResponse:
     try:
         if not is_today_or_future(date):
             raise HTTPException(status_code=400, detail="Date must be today or in the future.")
 
-        forecast = forecast_service.serve_forecast(city, state, date)
+        forecast = forecast_service.serve_forecast(city, state, date, station_id)
         if forecast is None:
             raise HTTPException(
                 status_code=404,
@@ -85,6 +88,8 @@ def get_forecast(
 
     except HTTPException:
         raise
+    except AmbiguousStationError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except (requests.RequestException, KeyError, TypeError, ValueError) as exc:
         raise HTTPException(
             status_code=502,

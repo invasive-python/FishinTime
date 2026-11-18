@@ -4,6 +4,35 @@ Static files used by the page belong in `static/`. The Docker image copies this
 directory and FastAPI serves it under `/static`; for example,
 `static/mermaid-diagram.png` is available at `/static/mermaid-diagram.png`.
 
+## Station county labels
+
+The station dropdown groups NOAA tide-prediction stations by county, with
+county labels in alphabetical order. It uses
+the bundled `services/station_counties.json` lookup, so loading the dropdown
+does not make Census requests. Unmatched stations, stations in a different
+state than their Census match, and stations whose coordinates or state have
+changed since the lookup was generated appear under "County unavailable".
+Stations remain in latitude/longitude order within each county.
+
+To refresh the lookup after NOAA station or Census geography updates, run:
+
+```sh
+./.venv/bin/python -m utilities.refresh_station_counties
+```
+
+The script fetches NOAA stations, submits their coordinates to the Census
+batch geocoder, and maps its county codes using the 2020 and 2026 Census county
+gazetteers. Batch codes can reflect 2020 boundaries, including historical
+Connecticut counties. The gazetteers do not cover all U.S. Island Areas, so
+some territories remain unmatched. Review warnings and commit the refreshed
+lookup for deployment; the app loads it once per process.
+
+Forecast requests use the selected NOAA station's coordinates and station ID.
+Existing `/forecast/get_forecast` clients may continue sending `city`, `state`,
+and `date`; if a station name is ambiguous within the state, also provide the
+`station_id` returned by `/api/cities`. The station's weather.gov grid response
+supplies its timezone.
+
 ## Frontend backend URL
 
 The frontend reads `window.FISHINTIME_API_BASE_URL` from `config.js` and uses it

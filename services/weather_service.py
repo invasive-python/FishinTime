@@ -5,7 +5,6 @@ import requests
 from fastapi import HTTPException
 
 from models.weather_schemas import ForecastPeriod, WeatherResponse
-from services.city_data_service import get_long_lat_from_city
 
 
 class _NoaaProbability(TypedDict, total=False):
@@ -67,13 +66,15 @@ def get_grid_data(lat: float, lon: float) -> dict[str, Any]:
     return data
 
 
-def get_forecast(city: str, state: str, date: date) -> WeatherResponse:
+def get_forecast(lat: float, lon: float, date: date) -> WeatherResponse:
     try:
-        city_data = get_long_lat_from_city(city, state)
-        if city_data is None:
-            raise HTTPException(status_code=404, detail="City not found")
-
-        periods = get_forecast_data(city_data, date)
+        grid_data = get_grid_data(lat, lon)
+        timezone = grid_data["properties"]["timeZone"]
+        if not isinstance(timezone, str) or not timezone:
+            raise ValueError("Gridpoint response is missing its timezone.")
+        periods = get_forecast_data(
+            {"latitude": lat, "longitude": lon}, date, grid_data=grid_data
+        )
         if not periods:
             raise HTTPException(
                 status_code=404,
@@ -81,7 +82,7 @@ def get_forecast(city: str, state: str, date: date) -> WeatherResponse:
             )
 
         return WeatherResponse(
-            city=city,
+            timezone=timezone,
             date=date,
             periods=[_map_noaa_period(period) for period in periods],
         )
@@ -95,11 +96,15 @@ def get_forecast(city: str, state: str, date: date) -> WeatherResponse:
 
 
 def get_forecast_data(
-    city_data: dict[str, Any], requested_date: date
+    city_data: dict[str, Any],
+    requested_date: date,
+    *,
+    grid_data: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     lat = city_data["latitude"]
     lon = city_data["longitude"]
-    grid_data = get_grid_data(lat, lon)
+    if grid_data is None:
+        grid_data = get_grid_data(lat, lon)
     grid_properties = grid_data["properties"]
     grid_x = grid_properties["gridX"]
     grid_y = grid_properties["gridY"]

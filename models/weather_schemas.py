@@ -27,7 +27,7 @@ class ForecastPeriod(BaseModel):
 
 
 class WeatherResponse(BaseModel):
-    city: str
+    timezone: str
     date: date
     periods: list[ForecastPeriod]
 
@@ -45,6 +45,8 @@ class ForecastResponse(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     city: str
+    city_lat: str
+    city_long: str
     date: str
     precipitation_probability: int
     start_time: str

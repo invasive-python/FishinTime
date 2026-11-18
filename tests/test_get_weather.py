@@ -2,34 +2,41 @@ import unittest
 from datetime import date
 from unittest.mock import Mock, patch
 
-import requests
+from fastapi import HTTPException
 
-from services.city_data_service import get_long_lat_from_city
-from services.weather_service import get_forecast_data
+from services.weather_service import get_forecast, get_forecast_data
 
 
 class WeatherLookupTests(unittest.TestCase):
-    def test_geocoder_filters_results_by_state(self):
-        response = Mock()
-        response.json.return_value = {
-            "results": [
-                {"name": "Miami", "admin1": "Oklahoma"},
-                {
-                    "name": "Miami",
-                    "admin1": "Florida",
-                    "latitude": 25.76,
-                    "longitude": -80.19,
-                },
-            ]
+    @patch("services.weather_service.requests.get")
+    @patch("services.weather_service.get_grid_data")
+    def test_forecast_uses_station_coordinates_and_grid_timezone(self, get_grid, get):
+        get_grid.return_value = {
+            "properties": {
+                "gridX": 10, "gridY": 20, "gridId": "MFL", "timeZone": "America/New_York"
+            }
         }
-        with patch(
-            "services.city_data_service.requests.get", return_value=response
-        ) as get:
-            result = get_long_lat_from_city("Miami", "FL")
+        get.return_value.json.return_value = {
+            "properties": {
+                "periods": [{
+                    "name": "Tuesday",
+                    "startTime": "2026-10-06T06:00:00-04:00",
+                    "endTime": "2026-10-06T18:00:00-04:00",
+                }]
+            }
+        }
+        result = get_forecast(26.118299, -80.144997, date(2026, 10, 6))
+        get_grid.assert_called_once_with(26.118299, -80.144997)
+        self.assertEqual(result.timezone, "America/New_York")
+        self.assertEqual(result.periods[0].name, "Tuesday")
+        self.assertIn("/MFL/10,20/forecast", get.call_args.args[0])
 
-        self.assertEqual(result["admin1"], "Florida")
-        self.assertEqual(get.call_args.kwargs["params"]["name"], "Miami")
-        response.raise_for_status.assert_called_once_with()
+    @patch("services.weather_service.get_grid_data", return_value={"properties": {}})
+    def test_forecast_reports_missing_grid_timezone(self, get_grid):
+        with self.assertRaises(HTTPException) as raised:
+            get_forecast(26.1, -80.1, date(2026, 10, 6))
+        self.assertEqual(raised.exception.status_code, 502)
+        get_grid.assert_called_once_with(26.1, -80.1)
 
     @patch(
         "services.weather_service.get_grid_data",
@@ -85,13 +92,6 @@ class WeatherLookupTests(unittest.TestCase):
                 {"latitude": 25.76, "longitude": -80.19}, date(2026, 10, 6)
             )
         grid.assert_called_once_with(25.76, -80.19)
-
-    def test_geocoder_propagates_provider_request_errors(self):
-        with patch(
-            "services.city_data_service.requests.get",
-            side_effect=requests.Timeout("provider timed out"),
-        ), self.assertRaises(requests.Timeout):
-            get_long_lat_from_city("Miami", "FL")
 
 
 if __name__ == "__main__":

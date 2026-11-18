@@ -107,3 +107,8 @@ variable "secret_agent_id_name" {
   type    = string
   default = "FishinSecret_Agent_Id"
 }
+
+variable "secret_geocode_api_name" {
+  type    = string
+  default = "FishinSecret_Geocode_API"
+}
