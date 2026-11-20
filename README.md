@@ -33,6 +33,68 @@ and `date`; if a station name is ambiguous within the state, also provide the
 `station_id` returned by `/api/cities`. The station's weather.gov grid response
 supplies its timezone.
 
+Forecast responses retain the existing fields and add the selected `station`,
+seven dated `daily_forecasts`, `weather_forecast` periods and NOAA tide
+`predictions`, plus a `nearshore` object with NWS marine-grid wave, swell, and
+wind interval arrays and an hourly `waves` array derived from those intervals.
+`precipitation_forecast` contains NWS weather intervals with precipitation.
+The first chance shown for a day is the start of its first overlapping interval,
+including 00:00 for an interval already in progress; it is not an exact onset.
+If there is no precipitation interval, the time is unavailable.
+Nearshore search is limited to 10 km from the station; `nearshore.grid.inferred`
+is true only when the chosen grid cell is more than 2.5 km away. `nearshore` is
+null when no suitable marine grid cell is found within the search limit.
+The nearshore chart plots total wave height and available primary and secondary
+swell heights separately; it does not add the swell heights to the total.
+Hover, focus, or tap a point on the wave or tide chart to see its details below
+the chart. Tide points represent NOAA high and low predictions.
+
+The forecast response also includes the station's IANA `timezone` (supplied by
+the NWS for the station's coordinates, never hard-coded), local `sunrise`,
+`sunset`, `moonrise` and `moonset` in each daily forecast (USNO), and `alerts`:
+active NWS alerts for the station point, its nearest marine grid cell, and its
+county. Alerts for adjacent marine zones and surf-zone forecast text are not
+included, and an unavailable alert service is reported in `alerts.error`
+rather than failing the forecast. The AI prompt states the selected date,
+today's date and the station time zone, lists the supplied data and its time
+and unit formats, and instructs the agent not to search the web or look up
+information that is already supplied.
+
+The forecast table has seven date tabs labeled with the weekday and day of the
+month. Dates less than three days away start
+the tab row; later dates appear in the middle. The initial request fetches the
+entire displayed week, and tab changes use that response without another
+forecast or AI request. The AI recommendation is labeled with the date used
+to generate it; choosing another tab does not update it. A dialog explains how
+to generate a recommendation for the newly selected date and can be suppressed
+until the browser tab closes or the user signs in or out. Independent weather and station data requests run
+concurrently. When nearshore intervals are available, the AI receives those intervals rather than
+the redundant hourly waves derived from them; the full response still includes
+both. The browser receives partial recommendation text over an authenticated
+stream and displays it as it arrives. Partial text is not the final result and
+may change; the stream starts showing text when the agent produces its answer.
+Until then, the agent's reasoning summary and commentary are shown as live
+activity under the progress indicator. Each run logs the elapsed time at which
+each agent stage first appeared (`AI evaluation timing in seconds`). Each reasoning
+step and commentary message is also appended, with elapsed time, to
+`fishintime_ai_reasoning.log` in the system temporary directory (owner-readable
+only) so prompts can be refined; final answers are not written to it.
+NWS forecast availability may cover less than
+the displayed week.
+Pressure and water temperature are NOAA CO-OPS observations, not forecasts.
+For each product, the app checks up to five nearby stations with active sensors
+in order of distance and uses the first with data from the past 72 hours, within 50 miles for
+pressure and 25 miles for water temperature. The source station and distance
+are shown; data freshness and environmental similarity are not guaranteed.
+Nearby conditions may differ from the selected location. The latest pressure
+and water observations are shown on every tab; the pressure observation time
+is displayed and does not represent a forecast for the selected date. When
+recent pressure data lacks the three-hour comparison reading, the app requests
+that time window separately; the trend remains unavailable if it cannot be found.
+Some locations have no nearby observations.
+Each successful request overwrites
+`forecast.json` in the application's working directory.
+
 ## Frontend backend URL
 
 The frontend reads `window.FISHINTIME_API_BASE_URL` from `config.js` and uses it

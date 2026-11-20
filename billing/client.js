@@ -107,6 +107,7 @@
     }
 
     localStorage.setItem(tokenStorageKey, result.access_token);
+    sessionStorage.removeItem("fishintime_hide_recommendation_date_notice");
     clearOAuthValues();
     sessionStorage.removeItem(oauthStateRetryStorageKey);
     history.replaceState(null, "", window.location.pathname);
@@ -198,6 +199,7 @@
     clearAccessToken();
     sessionStorage.removeItem(pendingPlanStorageKey);
     sessionStorage.removeItem("fishintime_last_forecast");
+    sessionStorage.removeItem("fishintime_hide_recommendation_date_notice");
     sessionStorage.setItem("fishintime_signed_out", "true");
     window.dispatchEvent(new CustomEvent("fishintime:auth-changed"));
     const logout = new URL(`${config.login_domain}/logout`);

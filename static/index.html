@@ -50,6 +50,32 @@
         }
         .submit-button:hover { background: var(--accent-hover); }
         .submit-button:disabled { opacity: .65; cursor: wait; }
+        .forecast-tabs {
+            display: grid;
+            position: relative;
+            grid-template-columns: repeat(7, minmax(54px, 1fr));
+            gap: 6px;
+            margin-top: 18px;
+            overflow-x: auto;
+        }
+        .forecast-tabs:empty { display: none; }
+        .forecast-tab {
+            min-height: 44px;
+            padding: 8px 2px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface);
+            color: var(--ink);
+            font: inherit;
+            font-weight: 800;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .forecast-tab[aria-selected="true"] {
+            border-color: var(--accent);
+            background: var(--accent);
+            color: #fff;
+        }
         #forecastResult {
             overflow-x: auto;
             margin: 18px 0 0;
@@ -68,6 +94,19 @@
             background: var(--soft);
         }
         #evaluation:empty { display: none; }
+        .recommendation-dialog {
+            width: min(440px, calc(100% - 64px));
+            padding: 24px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--ink);
+            background: var(--surface);
+        }
+        .recommendation-dialog::backdrop { background: rgba(0, 0, 0, .45); }
+        .recommendation-dialog h3 { margin-top: 0; }
+        .recommendation-dialog label { display: flex; align-items: center; gap: 8px; }
+        .recommendation-dialog input { width: auto; min-height: 0; }
+        .recommendation-dialog button { margin-top: 12px; }
         .markdown-content a { overflow-wrap: anywhere; }
         #forecastResult table {
             border-collapse: collapse;
@@ -148,6 +187,21 @@
             height: auto;
             overflow: visible;
         }
+        .wave-chart-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 16px;
+            margin-bottom: 10px;
+            color: var(--muted);
+            font-size: .85rem;
+        }
+        .wave-chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+        .wave-chart-swatch {
+            width: 20px;
+            border-top: 3px solid var(--accent);
+        }
+        .wave-chart-swatch.primary { border-color: #b15a1a; border-top-style: dashed; }
+        .wave-chart-swatch.secondary { border-color: #7952a0; border-top-style: dotted; }
         .wave-chart-curve {
             fill: none;
             stroke: var(--accent);
@@ -160,21 +214,33 @@
             stroke: var(--surface);
             stroke-width: 3;
         }
+        .wave-chart-curve.primary { stroke: #b15a1a; stroke-dasharray: 9 5; }
+        .wave-chart-curve.secondary { stroke: #7952a0; stroke-dasharray: 2 5; }
+        .wave-chart-point.primary { fill: #b15a1a; }
+        .wave-chart-point.secondary { fill: #7952a0; }
+        .tide-chart-point, .wave-chart-point { cursor: pointer; }
+        .tide-chart-point:focus, .wave-chart-point:focus {
+            outline: 2px solid var(--ink);
+            outline-offset: 2px;
+        }
+        .chart-point-details {
+            margin: 8px 0 0;
+            color: var(--ink);
+            font-size: .85rem;
+        }
         .pressure-indicator {
             display: grid;
             justify-items: start;
             gap: 7px;
-            padding: 14px;
-            border: 1px solid var(--border);
-            border-radius: 12px;
             color: var(--ink);
-            background: var(--soft);
             white-space: normal;
         }
-        .pressure-current {
+        .pressure-current, .moon-display-copy strong {
             color: var(--ink);
-            font-size: 1.45rem;
-            font-weight: 800;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+        .pressure-current {
             font-variant-numeric: tabular-nums;
         }
         .pressure-trend {
@@ -216,10 +282,33 @@
             display: grid;
             gap: 5px;
         }
-        .moon-display-copy strong { color: var(--ink); }
         .moon-display-copy span {
             color: var(--muted);
             font-size: .9rem;
+        }
+        .evaluation-activity {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: .9rem;
+        }
+        .evaluation-progress {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .evaluation-spinner {
+            flex: 0 0 18px;
+            width: 18px;
+            height: 18px;
+            box-sizing: border-box;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: evaluation-spin .8s linear infinite;
+        }
+        @keyframes evaluation-spin { to { transform: rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) {
+            .evaluation-spinner { animation: none; }
         }
         .progress-dots { display: inline-block; width: 1.5em; }
         .about-section { margin-top: 24px; }
@@ -319,7 +408,8 @@
 
                 <button class="submit-button" id="forecastSubmit" type="submit">Get Fishing Conditions</button>
             </form>
-            <div id="forecastResult" aria-live="polite"></div>
+            <div id="forecastTabs" class="forecast-tabs" role="tablist" aria-label="Forecast days"></div>
+            <div id="forecastResult" role="tabpanel" aria-live="polite"></div>
             <div id="evaluation" aria-live="polite">
                 <h3>Your AI fishing guide says:</h3>
                 <p>AI fishing recommendations are available to active subscribers.</p>
@@ -327,6 +417,15 @@
                 <span> or </span>
                 <a href="/billing/subscribe">Create account</a>
             </div>
+            <dialog id="recommendationDateDialog" class="recommendation-dialog"
+                    aria-labelledby="recommendationDateDialogTitle" aria-describedby="recommendationDateMessage">
+                <h3 id="recommendationDateDialogTitle">Recommendation date</h3>
+                <p id="recommendationDateMessage"></p>
+                <form method="dialog">
+                    <label><input id="hideRecommendationDateNotice" type="checkbox"> Do not show again</label>
+                    <button class="submit-button" type="submit">OK</button>
+                </form>
+            </dialog>
         </section>
 
     </main>
@@ -342,26 +441,77 @@
         const forecastForm = document.getElementById("forecastForm");
         const dateSelect = document.getElementById("dateSelect");
         const forecastSubmit = document.getElementById("forecastSubmit");
+        const forecastTabs = document.getElementById("forecastTabs");
         const forecastResult = document.getElementById("forecastResult");
         const evaluation = document.getElementById("evaluation");
+        const recommendationDateDialog = document.getElementById("recommendationDateDialog");
+        const recommendationDateMessage = document.getElementById("recommendationDateMessage");
+        const hideRecommendationDateNotice = document.getElementById("hideRecommendationDateNotice");
         const DEFAULT_STATE = "FL";
         const DEFAULT_STATION = "Fort Lauderdale, Andrews Ave. Bridge";
         const forecastStorageKey = "fishintime_last_forecast";
         const signedOutStorageKey = "fishintime_signed_out";
+        const hideRecommendationDateNoticeKey = "fishintime_hide_recommendation_date_notice";
         let signedInUser = null;
         let activeEvaluationRequest = 0;
+        let evaluationStreamController = null;
         let evaluationProgressTimer = null;
+        let currentForecastSelection = null;
+        let currentForecastResult = null;
+        let currentEvaluationDate = null;
 
-        function showAiAvailabilityNotice() {
+        function formatRecommendationDate(date) {
+            return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
+                timeZone: "UTC", year: "numeric", month: "long", day: "numeric",
+            });
+        }
+
+        function createEvaluationHeading() {
+            const heading = document.createElement("h3");
+            heading.textContent = `Overall Recommendation — ${formatRecommendationDate(currentEvaluationDate)}`;
+            return heading;
+        }
+
+        function showRecommendationDateNotice(selectedDate) {
+            if (!currentEvaluationDate || selectedDate === currentEvaluationDate) return;
+            try {
+                if (sessionStorage.getItem(hideRecommendationDateNoticeKey) === "true") return;
+            } catch (error) {
+                console.error("Unable to read the recommendation notice preference:", error);
+            }
+            recommendationDateMessage.textContent =
+                `Forecast shown: ${formatRecommendationDate(selectedDate)}. ` +
+                `This recommendation is still for ${formatRecommendationDate(currentEvaluationDate)}. ` +
+                `Click Get Fishing Conditions to generate one for ${formatRecommendationDate(selectedDate)}.`;
+            hideRecommendationDateNotice.checked = false;
+            recommendationDateDialog.showModal();
+        }
+
+        recommendationDateDialog.addEventListener("close", () => {
+            if (!hideRecommendationDateNotice.checked) return;
+            try {
+                sessionStorage.setItem(hideRecommendationDateNoticeKey, "true");
+            } catch (error) {
+                console.error("Unable to save the recommendation notice preference:", error);
+            }
+        });
+
+        function showAiAvailabilityNotice(loading = false) {
             const heading = document.createElement("h3");
             heading.textContent = "Your AI fishing guide says:";
             const message = document.createElement("p");
             if (signedInUser) {
-                message.textContent = "Your AI response may take some time";
-                evaluation.replaceChildren(heading, message);
+                if (loading) {
+                    evaluation.replaceChildren(heading, createEvaluationProgressMessage());
+                } else {
+                    stopEvaluationProgress();
+                    message.textContent = "Get fishing conditions to receive an AI recommendation.";
+                    evaluation.replaceChildren(heading, message);
+                }
                 return;
             }
 
+            stopEvaluationProgress();
             message.textContent =
                 "AI fishing recommendations are available to active subscribers.";
             const signInLink = document.createElement("a");
@@ -387,7 +537,13 @@
             sessionStorage.removeItem(forecastStorageKey);
             stopEvaluationProgress();
             activeEvaluationRequest += 1;
+            cancelEvaluationStream();
+            currentForecastSelection = null;
+            currentForecastResult = null;
+            currentEvaluationDate = null;
+            forecastTabs.replaceChildren();
             forecastResult.replaceChildren();
+            forecastSubmit.disabled = false;
             forecastForm.reset();
             stateSelect.value = DEFAULT_STATE;
             dateSelect.value = "";
@@ -399,10 +555,16 @@
             if (event.persisted) clearForecastAfterSignOut();
         });
 
+        window.addEventListener("storage", event => {
+            if (event.key === "fishintime_access_token" && event.oldValue !== event.newValue) {
+                sessionStorage.removeItem(hideRecommendationDateNoticeKey);
+            }
+        });
+
         window.addEventListener("fishintime:auth-state-changed", event => {
             signedInUser = event.detail?.account || null;
             if (forecastResult.childElementCount === 0) {
-                showAiAvailabilityNotice();
+                showAiAvailabilityNotice(forecastSubmit.disabled);
             }
         });
 
@@ -439,35 +601,92 @@
             }
         }
 
+        function showEvaluationError(message) {
+            stopEvaluationProgress();
+            evaluation.querySelector(".evaluation-progress")?.remove();
+            const error = document.createElement("p");
+            error.textContent = message;
+            evaluation.append(error);
+        }
+
+        function cancelEvaluationStream() {
+            if (evaluationStreamController) {
+                evaluationStreamController.abort();
+                evaluationStreamController = null;
+            }
+        }
+
         async function loadEvaluation(evaluationId, requestId) {
-            while (requestId === activeEvaluationRequest) {
-                await new Promise(resolve => setTimeout(resolve, 1500));
+            const partial = document.createElement("div");
+            const activity = document.createElement("div");
+            activity.className = "evaluation-activity";
+            let displayed = "";
+            let shownActivity = "";
+            const controller = new AbortController();
+            evaluationStreamController = controller;
+            let reader;
+            let finished = false;
+            try {
                 const response = await fetch(
-                    apiUrl(`/forecast/evaluation/${encodeURIComponent(evaluationId)}`),
-                    { headers: authorizationHeaders() }
+                    apiUrl(`/forecast/evaluation/${encodeURIComponent(evaluationId)}/stream`),
+                    { headers: authorizationHeaders(), signal: controller.signal }
                 );
-                const result = await response.json();
                 if (!response.ok) {
+                    const result = await response.json();
                     throw new Error(result.detail || `Evaluation request failed: ${response.status}`);
                 }
-                if (requestId !== activeEvaluationRequest) return;
-
-                if (result.status === "completed") {
-                    stopEvaluationProgress();
-                    saveCompletedEvaluation(result.ai_evaluation || "");
-                    evaluation.replaceChildren(
-                        Object.assign(document.createElement("h3"), {
-                            textContent: "Overall Recommendation",
-                        }),
-                        renderMarkdown(result.ai_evaluation || "")
-                    );
-                    return;
+                if (!response.body) throw new Error("The AI evaluation stream is unavailable.");
+                reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = "";
+                while (requestId === activeEvaluationRequest) {
+                    const { value, done } = await reader.read();
+                    if (requestId !== activeEvaluationRequest) return;
+                    if (done) throw new Error("The AI evaluation stream ended unexpectedly.");
+                    buffer += decoder.decode(value, { stream: true });
+                    let lineEnd;
+                    while ((lineEnd = buffer.indexOf("\n")) !== -1) {
+                        const line = buffer.slice(0, lineEnd).replace(/\r$/, "");
+                        buffer = buffer.slice(lineEnd + 1);
+                        if (!line.startsWith("data: ")) continue;
+                        const result = JSON.parse(line.slice(6));
+                        if (result.status === "completed") {
+                            finished = true;
+                            stopEvaluationProgress();
+                            saveCompletedEvaluation(result.ai_evaluation || "");
+                            evaluation.replaceChildren(
+                                createEvaluationHeading(),
+                                renderMarkdown(result.ai_evaluation || "")
+                            );
+                            return;
+                        }
+                        if (typeof result.ai_evaluation === "string" && result.ai_evaluation !== displayed) {
+                            if (!displayed) {
+                                evaluation.insertBefore(partial, evaluation.querySelector(".evaluation-progress"));
+                                activity.remove();
+                            }
+                            displayed = result.ai_evaluation;
+                            partial.replaceChildren(renderMarkdown(displayed));
+                        } else if (!displayed && typeof result.activity === "string"
+                                   && result.activity !== shownActivity) {
+                            if (!shownActivity) evaluation.append(activity);
+                            shownActivity = result.activity;
+                            activity.replaceChildren(renderMarkdown(shownActivity));
+                        }
+                        if (result.status === "failed") {
+                            finished = true;
+                            activity.remove();
+                            showEvaluationError(result.error || "The AI evaluation could not be prepared.");
+                            return;
+                        }
+                    }
                 }
-                if (result.status === "failed") {
-                    stopEvaluationProgress();
-                    evaluation.textContent = result.error || "The AI evaluation could not be prepared.";
-                    return;
+            } finally {
+                if (reader) {
+                    if (finished) reader.releaseLock();
+                    else await reader.cancel();
                 }
+                if (evaluationStreamController === controller) evaluationStreamController = null;
             }
         }
 
@@ -528,6 +747,11 @@
             return directions[Math.round(((angle % 360) + 360) % 360 / 22.5) % 16];
         }
 
+        function formatObservationStation(station) {
+            const name = station.name || "name unavailable";
+            return `NOAA station: ${name}, ${station.distance_miles.toFixed(1)} miles away`;
+        }
+
         function renderPressureIndicator(pressure) {
             const indicator = document.createElement("div");
             indicator.className = "pressure-indicator";
@@ -556,6 +780,24 @@
             current.className = "pressure-current";
             current.textContent = `${currentPressure.toFixed(2)} inHg`;
             indicator.append(current);
+            if (pressure?.station) {
+                const station = document.createElement("p");
+                station.className = "pressure-outlook";
+                station.textContent = formatObservationStation(pressure.station);
+                indicator.append(station);
+            }
+            if (pressure?.observed_at) {
+                const observed = document.createElement("p");
+                observed.className = "pressure-outlook";
+                observed.textContent = `NOAA observation: ${pressure.observed_at}`;
+                indicator.append(observed);
+            }
+            if (pressure?.error) {
+                const error = document.createElement("p");
+                error.className = "pressure-error";
+                error.textContent = pressure.error;
+                indicator.append(error);
+            }
 
             const rawChange = pressure?.change_3h_inhg;
             const change =
@@ -587,7 +829,8 @@
             const trend = document.createElement("span");
             trend.className = `pressure-trend ${direction}`;
             trend.textContent =
-                `${arrow}${suppliedTrend || direction[0].toUpperCase() + direction.slice(1)}`;
+                `${arrow}${suppliedTrend || (direction === "unavailable"
+                    ? "Trend unavailable" : direction[0].toUpperCase() + direction.slice(1))}`;
             indicator.append(trend);
 
             if (Number.isFinite(change)) {
@@ -609,11 +852,43 @@
             return indicator;
         }
 
-        function renderWaveChart(waveRows, selectedDate) {
+        function addChartPointDetails(chart, svg) {
+            const readout = document.createElement("p");
+            readout.className = "chart-point-details";
+            readout.setAttribute("aria-live", "polite");
+            readout.textContent = "Hover, focus, or tap a data point for details.";
+            chart.append(svg, readout);
+
+            return (point, details) => {
+                point.setAttribute("tabindex", "0");
+                point.setAttribute("role", "button");
+                point.setAttribute("aria-label", details);
+                const showDetails = () => { readout.textContent = details; };
+                point.addEventListener("pointerenter", showDetails);
+                point.addEventListener("focus", showDetails);
+                point.addEventListener("click", showDetails);
+                point.addEventListener("keydown", event => {
+                    if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        showDetails();
+                    }
+                });
+            };
+        }
+
+        function renderWaveChart(waveRows, selectedDate, swellSeries = null) {
             const chart = document.createElement("div");
             chart.className = "wave-chart";
-            const points = Array.isArray(waveRows)
-                ? waveRows
+            const startTime = Date.parse(`${selectedDate}T00:00:00Z`);
+            const endTime = startTime + 24 * 60 * 60 * 1000;
+            const sources = [
+                { label: "Total wave height", style: "total", rows: waveRows },
+                ...(swellSeries || []),
+            ];
+            const series = sources.map(source => ({
+                ...source,
+                points: Array.isArray(source.rows)
+                ? source.rows
                       .map(row => {
                           const localDateTime = String(row?.date ?? "").match(
                               /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/
@@ -642,31 +917,46 @@
                               height,
                               direction: row.wave_direction,
                               period: row.wave_period,
+                              segment: row.segment,
+                              isEnd: row.is_end,
                           };
                       })
                       .filter(
                           point =>
                               point !== null &&
-                              point.timestamp >= Date.parse(`${selectedDate}T00:00:00Z`) &&
-                              point.timestamp <=
-                                  Date.parse(`${selectedDate}T00:00:00Z`) +
-                                      24 * 60 * 60 * 1000
+                              point.timestamp >= startTime &&
+                              point.timestamp <= endTime
                       )
                       .sort((left, right) => left.timestamp - right.timestamp)
-                : [];
+                : [],
+            }));
+            const points = series.flatMap(source => source.points);
 
             if (points.length === 0) {
                 chart.textContent = "No wave data available.";
                 return chart;
             }
 
+            if (swellSeries) {
+                const legend = document.createElement("div");
+                legend.className = "wave-chart-legend";
+                for (const source of series) {
+                    const item = document.createElement("span");
+                    const swatch = document.createElement("i");
+                    swatch.className = `wave-chart-swatch ${source.style}`;
+                    swatch.setAttribute("aria-hidden", "true");
+                    item.append(swatch, document.createTextNode(
+                        `${source.label}${source.points.length ? "" : " (unavailable)"}`
+                    ));
+                    legend.append(item);
+                }
+                chart.append(legend);
+            }
             const width = 720;
             const height = 300;
             const margin = { top: 18, right: 18, bottom: 42, left: 54 };
             const plotWidth = width - margin.left - margin.right;
             const plotHeight = height - margin.top - margin.bottom;
-            const startTime = Date.parse(`${selectedDate}T00:00:00Z`);
-            const endTime = startTime + 24 * 60 * 60 * 1000;
             const minHeight = Math.min(...points.map(point => point.height));
             const maxHeight = Math.max(...points.map(point => point.height));
             const padding = Math.max((maxHeight - minHeight) * 0.18, 0.2);
@@ -689,12 +979,13 @@
             };
             const svg = svgElement("svg", {
                 viewBox: `0 0 ${width} ${height}`,
-                role: "img",
-                "aria-label": `Hourly forecast wave height in feet for ${selectedDate}`,
+                role: "group",
+                "aria-label": `${swellSeries ? "Wave and swell heights" : "Hourly forecast wave height"} in feet for ${selectedDate}`,
             });
             const title = svgElement("title");
-            title.textContent = "Hourly forecast wave height";
+            title.textContent = swellSeries ? "Wave and swell heights" : "Hourly forecast wave height";
             svg.append(title);
+            const addPointDetails = addChartPointDetails(chart, svg);
 
             for (let tick = 0; tick <= 4; tick += 1) {
                 const value = yMin + ((yMax - yMin) * tick) / 4;
@@ -750,43 +1041,44 @@
             axisLabel.textContent = "Wave height (ft)";
             svg.append(axisLabel);
 
-            if (points.length > 1) {
-                svg.append(
-                    svgElement("path", {
-                        d: points
-                            .map(
-                                (point, index) =>
-                                    `${index === 0 ? "M" : "L"}${x(point.timestamp)},${y(point.height)}`
-                            )
-                            .join(" "),
-                        class: "wave-chart-curve",
-                    })
-                );
+            for (const source of series) {
+                if (source.points.length > 1) {
+                    svg.append(svgElement("path", {
+                        d: source.points.map((point, index) => {
+                            const previous = source.points[index - 1];
+                            const move = index === 0 ||
+                                (point.segment !== undefined && point.segment !== previous.segment);
+                            return `${move ? "M" : "L"}${x(point.timestamp)},${y(point.height)}`;
+                        }).join(" "),
+                        class: `wave-chart-curve ${source.style}`,
+                    }));
+                }
+
+                for (const point of source.points) {
+                    if (point.isEnd) continue;
+                    const marker = svgElement("circle", {
+                        cx: x(point.timestamp),
+                        cy: y(point.height),
+                        r: 4.5,
+                        class: `wave-chart-point ${source.style}`,
+                    });
+                    const description = svgElement("title");
+                    const details = [
+                        `${source.label}, ${point.localTime}: ${point.height.toFixed(2)} ft`,
+                    ];
+                    if (point.direction !== null && point.direction !== undefined) {
+                        details.push(`direction ${formatWaveDirection(point.direction)}`);
+                    }
+                    if (point.period !== null && point.period !== undefined) {
+                        details.push(`period ${point.period} s`);
+                    }
+                    description.textContent = details.join(", ");
+                    addPointDetails(marker, description.textContent);
+                    marker.append(description);
+                    svg.append(marker);
+                }
             }
 
-            for (const point of points) {
-                const marker = svgElement("circle", {
-                    cx: x(point.timestamp),
-                    cy: y(point.height),
-                    r: 4.5,
-                    class: "wave-chart-point",
-                });
-                const description = svgElement("title");
-                const details = [
-                    `${point.localTime}: ${point.height.toFixed(2)} ft`,
-                ];
-                if (point.direction !== null && point.direction !== undefined) {
-                    details.push(`direction ${formatWaveDirection(point.direction)}`);
-                }
-                if (point.period !== null && point.period !== undefined) {
-                    details.push(`period ${point.period} s`);
-                }
-                description.textContent = details.join(", ");
-                marker.append(description);
-                svg.append(marker);
-            }
-
-            chart.append(svg);
             return chart;
         }
 
@@ -1038,7 +1330,7 @@
             };
 
             svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-            svg.setAttribute("role", "img");
+            svg.setAttribute("role", "group");
             svg.setAttribute(
                 "aria-label",
                 `Tide predictions for ${selectedDate}, height in feet`
@@ -1046,6 +1338,7 @@
             const title = svgElement("title");
             title.textContent = `Tide predictions for ${selectedDate}`;
             svg.append(title);
+            const addPointDetails = addChartPointDetails(chart, svg);
 
             for (let tick = 0; tick <= 4; tick += 1) {
                 const value = yMin + ((yMax - yMin) * tick) / 4;
@@ -1151,11 +1444,11 @@
                 description.textContent =
                     `${point.type === "high" ? "High" : "Low"} tide: ` +
                     `${point.label}, ${point.height.toFixed(2)} ft`;
+                addPointDetails(circle, description.textContent);
                 circle.append(description);
                 svg.append(circle);
             }
 
-            chart.append(svg);
             return chart;
         }
 
@@ -1294,28 +1587,35 @@
             stateSelect.value = savedState.state;
             await loadStations(savedState.state, savedState.station_id || savedState.city);
             dateSelect.value = savedState.date;
-            forecastResult.replaceChildren(renderForecastTable(savedState.result));
+            currentForecastSelection = {
+                state: savedState.state,
+                city: savedState.city,
+                station_id: savedState.station_id,
+                anchorDate: savedState.anchorDate || savedState.result.date || savedState.date,
+                startDate: savedState.result.forecast_start_date,
+            };
+            currentForecastResult = savedState.result;
+            currentEvaluationDate = (typeof savedState.aiEvaluation === "string" || savedState.result.evaluation_id)
+                ? (savedState.evaluationDate || savedState.result.date || currentForecastSelection.anchorDate)
+                : null;
+            renderForecastTabs(currentForecastSelection.anchorDate, savedState.date, currentForecastSelection.startDate);
+            renderForecastForDate(savedState.date);
 
             if (typeof savedState.aiEvaluation === "string") {
                 evaluation.replaceChildren(
-                    Object.assign(document.createElement("h3"), {
-                        textContent: "Overall Recommendation",
-                    }),
+                    createEvaluationHeading(),
                     renderMarkdown(savedState.aiEvaluation)
                 );
             } else if (savedState.result.evaluation_id) {
                 const requestId = ++activeEvaluationRequest;
                 evaluation.replaceChildren(
-                    Object.assign(document.createElement("h3"), {
-                        textContent: "Overall Recommendation",
-                    }),
+                    createEvaluationHeading(),
                     createEvaluationProgressMessage()
                 );
                 loadEvaluation(savedState.result.evaluation_id, requestId).catch(error => {
                     if (requestId === activeEvaluationRequest) {
-                        stopEvaluationProgress();
                         console.error("Error restoring AI evaluation:", error);
-                        evaluation.textContent = "Unable to load the AI evaluation.";
+                        showEvaluationError("Unable to load the AI evaluation.");
                     }
                 });
             } else {
@@ -1376,30 +1676,249 @@
             await loadStations(event.target.value);
         });
 
+        function forecastTabDates(selectedDate, today = new Date()) {
+            const selected = new Date(`${selectedDate}T00:00:00Z`);
+            const localToday = Date.UTC(
+                today.getFullYear(), today.getMonth(), today.getDate()
+            );
+            const daysAhead = (selected.getTime() - localToday) / 86400000;
+            const start = selected.getTime() - (daysAhead < 3 ? 0 : 3 * 86400000);
+            return Array.from({ length: 7 }, (_, index) =>
+                new Date(start + index * 86400000).toISOString().slice(0, 10)
+            );
+        }
+
+        function renderForecastTabs(anchorDate, selectedDate, startDate = null) {
+            const dates = startDate
+                ? Array.from({ length: 7 }, (_, index) =>
+                    new Date(Date.parse(`${startDate}T00:00:00Z`) + index * 86400000).toISOString().slice(0, 10))
+                : forecastTabDates(anchorDate);
+            const labels = ["S", "M", "T", "W", "Th", "F", "S"];
+            const buttons = dates.map(date => {
+                const day = new Date(`${date}T00:00:00Z`);
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "forecast-tab";
+                button.id = `forecast-tab-${date}`;
+                button.textContent = `${labels[day.getUTCDay()]}-${day.getUTCDate()}`;
+                button.setAttribute("role", "tab");
+                button.setAttribute("aria-controls", "forecastResult");
+                button.setAttribute("aria-label", day.toLocaleDateString("en-US", {
+                    timeZone: "UTC", weekday: "long", year: "numeric",
+                    month: "long", day: "numeric",
+                }));
+                button.addEventListener("click", () => selectForecastDate(date));
+                button.addEventListener("keydown", event => {
+                    const index = dates.indexOf(date);
+                    let nextIndex;
+                    if (event.key === "ArrowRight") nextIndex = (index + 1) % dates.length;
+                    else if (event.key === "ArrowLeft") nextIndex = (index + dates.length - 1) % dates.length;
+                    else if (event.key === "Home") nextIndex = 0;
+                    else if (event.key === "End") nextIndex = dates.length - 1;
+                    else return;
+                    event.preventDefault();
+                    buttons[nextIndex].focus();
+                });
+                return button;
+            });
+            forecastTabs.replaceChildren(...buttons);
+            updateSelectedForecastTab(selectedDate);
+        }
+
+        function updateSelectedForecastTab(selectedDate) {
+            for (const button of forecastTabs.children) {
+                const selected = button.id === `forecast-tab-${selectedDate}`;
+                button.setAttribute("aria-selected", String(selected));
+                button.tabIndex = selected ? 0 : -1;
+                if (selected) {
+                    if (button.offsetLeft < forecastTabs.scrollLeft) {
+                        forecastTabs.scrollLeft = button.offsetLeft;
+                    } else if (button.offsetLeft + button.offsetWidth > forecastTabs.scrollLeft + forecastTabs.clientWidth) {
+                        forecastTabs.scrollLeft = button.offsetLeft + button.offsetWidth - forecastTabs.clientWidth;
+                    }
+                }
+            }
+            forecastResult.setAttribute("aria-labelledby", `forecast-tab-${selectedDate}`);
+        }
+
+        function selectForecastDate(date) {
+            if (!currentForecastSelection || !currentForecastResult) return;
+            const previousTab = forecastResult.getAttribute("aria-labelledby");
+            dateSelect.value = date;
+            updateSelectedForecastTab(date);
+            renderForecastForDate(date);
+            try {
+                const saved = JSON.parse(sessionStorage.getItem(forecastStorageKey) || "null");
+                if (saved) {
+                    saved.date = date;
+                    saveForecastState(saved);
+                }
+            } catch (error) {
+                console.error("Unable to preserve the selected forecast date:", error);
+            }
+            if (previousTab !== `forecast-tab-${date}`) showRecommendationDateNotice(date);
+        }
+
+        function renderForecastForDate(date) {
+            const daily = currentForecastResult.daily_forecasts?.find(day => day.date === date);
+            if (!daily && date !== currentForecastResult.date) {
+                forecastResult.textContent = `Forecast data unavailable for ${date}.`;
+                return;
+            }
+            forecastResult.replaceChildren(renderForecastTable({
+                ...currentForecastResult,
+                ...(daily || {}),
+                ...(currentForecastResult.pressure != null
+                    ? { pressure: currentForecastResult.pressure } : {}),
+                date,
+            }));
+        }
+
+        function renderNearshoreForecast(nearshore, selectedDate) {
+            const container = document.createElement("div");
+            const grid = nearshore?.grid;
+            if (!grid) {
+                container.textContent = "Nearshore forecast unavailable.";
+                return container;
+            }
+
+            const gridDescription = document.createElement("p");
+            const distanceMiles = (grid.distance_km * 0.621371192237334).toFixed(1);
+            gridDescription.textContent = nearshore.grid.inferred
+                ? `NOAA marine grid cell: ${distanceMiles} miles away; conditions are inferred.`
+                : `NOAA marine grid cell: ${distanceMiles} miles away.`;
+            container.append(gridDescription);
+
+            const formatter = new Intl.DateTimeFormat("en-CA", {
+                timeZone: nearshore.timezone,
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                hourCycle: "h23",
+            });
+            const localTimestamp = timestamp => {
+                const parts = Object.fromEntries(
+                    formatter
+                        .formatToParts(new Date(timestamp))
+                        .filter(part => part.type !== "literal")
+                        .map(part => [part.type, part.value])
+                );
+                return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+            };
+            const intervalBounds = value => {
+                const start = localTimestamp(value.valid_start);
+                const duration = String(value.duration).match(
+                    /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/
+                );
+                if (!duration) return null;
+                const milliseconds = (
+                    Number(duration[1] || 0) * 86400 +
+                    Number(duration[2] || 0) * 3600 +
+                    Number(duration[3] || 0) * 60 +
+                    Number(duration[4] || 0)
+                ) * 1000;
+                const end = localTimestamp(Date.parse(value.valid_start) + milliseconds);
+                return { start, end };
+            };
+            const valueAt = (series, time) => (series?.values || []).find(value => {
+                const bounds = intervalBounds(value);
+                return bounds && bounds.start <= time && time < bounds.end;
+            })?.value;
+            const dayStart = `${selectedDate}T00:00`;
+            const dayEnd = `${new Date(Date.parse(`${selectedDate}T00:00:00Z`) + 86400000).toISOString().slice(0, 10)}T00:00`;
+            const rowsFor = (heights, periods, directions) =>
+                (heights?.values || []).flatMap((value, segment) => {
+                    const bounds = intervalBounds(value);
+                    if (!bounds || value.value === null || bounds.start >= dayEnd || bounds.end <= dayStart) return [];
+                    const start = bounds.start < dayStart ? dayStart : bounds.start;
+                    const end = bounds.end > dayEnd ? dayEnd : bounds.end;
+                    const row = {
+                        date: start,
+                        wave_height: value.value,
+                        wave_period: valueAt(periods, start),
+                        wave_direction: valueAt(directions, start),
+                        segment,
+                    };
+                    return [row, { ...row, date: end, is_end: true }];
+                });
+            const waveRows = rowsFor(
+                nearshore.wave_height, nearshore.wave_period, nearshore.wave_direction
+            );
+            const swellSeries = [
+                {
+                    label: "Primary swell",
+                    style: "primary",
+                    rows: rowsFor(
+                        nearshore.primary_swell_height, nearshore.primary_swell_period,
+                        nearshore.primary_swell_direction
+                    ),
+                },
+                {
+                    label: "Secondary swell",
+                    style: "secondary",
+                    rows: rowsFor(
+                        nearshore.secondary_swell_height, nearshore.secondary_swell_period,
+                        nearshore.secondary_swell_direction
+                    ),
+                },
+            ];
+            container.append(renderWaveChart(waveRows, selectedDate, swellSeries));
+            return container;
+        }
+
         function renderForecastTable(result) {
             const labels = new Map([
                 ["city", "City"],
                 ["date", "Date"],
                 ["precipitation_probability", "Chance of Precipitation"],
-                ["start_time", "Precipitation Starting Time (local)"],
-                ["temp", "Temperature"],
+                ["start_time", "First Chance of Precipitation"],
+                ["temp", "Current Air Temperature"],
+                ["water_temperature", "Current Water Temperature"],
                 ["moon_current_phase", "Current Moon Phase"],
                 ["moon_brightness", "Moon Brightness"],
+                ["sunrise", "Sunrise"],
+                ["sunset", "Sunset"],
+                ["moonrise", "Moonrise"],
+                ["moonset", "Moonset"],
                 ["predictions", "Tides"],
                 ["detailed_forecast", "Forecast"],
+                ["nearshore", "Nearshore Conditions"],
                 ["waves", "Waves"],
-                ["pressure", "Barometric Pressure"],
+                ["pressure", "Current Barometric Pressure"],
             ]);
+            const sunMoonKeys = ["sunrise", "sunset", "moonrise", "moonset"];
+            const sunMoonEntries = sunMoonKeys
+                .filter(key => key in result)
+                .map(key => [key, result[key]]);
             const entries = Object.entries(result).filter(
                 ([key]) =>
+                    !sunMoonKeys.includes(key) &&
+                    key !== "water_temperature" &&
                     key !== "ai_evaluation" &&
                     key !== "evaluation_id" &&
+                    key !== "station" &&
+                    key !== "weather_forecast" &&
+                    key !== "precipitation_forecast" &&
+                    key !== "daily_forecasts" &&
+                    key !== "forecast_start_date" &&
+                    key !== "timezone" &&
+                    key !== "alerts" &&
                     key !== "city_lat" &&
                     key !== "city_long" &&
                     key !== "moon_brightness" &&
                     key !== "moon_closest_phase" &&
-                    key !== "moon_closest_phase_date"
+                    key !== "moon_closest_phase_date" &&
+                    !(key === "waves" && result.nearshore)
             );
+            if ("water_temperature" in result) {
+                const temperatureIndex = entries.findIndex(([key]) => key === "temp");
+                entries.splice(temperatureIndex < 0 ? entries.length : temperatureIndex + 1,
+                    0, ["water_temperature", result.water_temperature]);
+            }
+            const moonIndex = entries.findIndex(([key]) => key === "moon_current_phase");
+            entries.splice(moonIndex < 0 ? entries.length : moonIndex + 1, 0, ...sunMoonEntries);
             const details = document.createElement("table");
             const windFields = new Set(["wind_speed_min", "wind_speed_max", "wind_direction"]);
             let windRendered = false;
@@ -1430,10 +1949,38 @@
                         ? result.wind_direction.trim()
                         : "";
                     definition.textContent = [direction, speed].filter(Boolean).join(" ") || "Unavailable";
+                } else if (key === "date" && value !== null && value !== undefined) {
+                    const date = typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
+                        ? new Date(`${value}T00:00:00Z`)
+                        : new Date(NaN);
+                    if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
+                        console.error("Invalid forecast date:", value);
+                        definition.textContent = "Unavailable";
+                    } else {
+                        definition.textContent = date.toLocaleDateString("en-US", {
+                            weekday: "long", month: "long", day: "numeric", timeZone: "UTC",
+                        });
+                    }
+                } else if (key === "start_time" && typeof value === "string") {
+                    const match = value.match(/^\d{4}-\d{2}-\d{2} (\d{2}:\d{2})$/);
+                    definition.textContent = match ? match[1] : value;
                 } else if (key === "pressure") {
                     definition.append(renderPressureIndicator(value));
+                } else if (key === "water_temperature") {
+                    if (value && typeof value.temperature_f === "number" &&
+                        Number.isFinite(value.temperature_f) && typeof value.observed_at === "string") {
+                        const observedAt = value.observed_at.slice(0, 16).replace("T", " ");
+                        definition.textContent = `${value.temperature_f}°F `;
+                        if (value.station) {
+                            definition.textContent += `— ${formatObservationStation(value.station)}`;
+                        }
+                    } else {
+                        definition.textContent = "Unavailable";
+                    }
                 } else if (key === "moon_current_phase") {
                     definition.append(renderMoonPhase(value, result.moon_brightness));
+                } else if (key === "nearshore") {
+                    definition.append(renderNearshoreForecast(value, result.date));
                 } else if (key === "waves") {
                     let waveRows = value;
                     if (typeof waveRows === "string") {
@@ -1472,7 +2019,9 @@
                         precipitation_probability: "%",
                         temp: "°F",
                     }[key] || "";
-                    definition.textContent = `${displayValue}${unit}`;
+                    definition.textContent = value === null || value === undefined
+                        ? "Unavailable"
+                        : `${displayValue}${unit}`;
                 }
                 row.append(definition);
                 details.append(row);
@@ -1480,21 +2029,21 @@
             return details;
         }
 
-        forecastForm.addEventListener("submit", async (event) => {
-            event.preventDefault();
+        async function loadForecast(selection, selectedDate) {
             stopEvaluationProgress();
+            cancelEvaluationStream();
             forecastSubmit.disabled = true;
             forecastResult.textContent = "Loading forecast...";
             const requestId = ++activeEvaluationRequest;
-            showAiAvailabilityNotice();
+            showAiAvailabilityNotice(true);
 
-            const stationName = citySelect.selectedOptions[0].textContent;
             const params = new URLSearchParams({
-                city: stationName,
-                station_id: citySelect.value,
-                state: stateSelect.value,                
-                date: dateSelect.value,
+                city: selection.city,
+                state: selection.state,
+                date: selectedDate,
+                start_date: selection.startDate,
             });
+            if (selection.station_id) params.set("station_id", selection.station_id);
 
             try {
                 const response = await fetch(
@@ -1502,31 +2051,30 @@
                     { headers: authorizationHeaders() }
                 );
                 const result = await response.json();
+                if (requestId !== activeEvaluationRequest) return;
                 if (!response.ok) {
                     throw new Error(result.detail || `Forecast request failed: ${response.status}`);
                 }
 
+                currentForecastResult = result;
+                currentEvaluationDate = result.evaluation_id ? selectedDate : null;
                 saveForecastState({
-                    state: stateSelect.value,
-                    city: stationName,
-                    station_id: citySelect.value,
-                    date: dateSelect.value,
+                    ...selection,
+                    date: selectedDate,
+                    evaluationDate: currentEvaluationDate,
                     result,
                     aiEvaluation: null,
                 });
-                forecastResult.replaceChildren(renderForecastTable(result));
+                renderForecastForDate(selectedDate);
                 if (result.evaluation_id) {
                     evaluation.replaceChildren(
-                        Object.assign(document.createElement("h3"), {
-                            textContent: "Overall Recommendation",
-                        }),
+                        createEvaluationHeading(),
                         createEvaluationProgressMessage()
                     );
                     loadEvaluation(result.evaluation_id, requestId).catch(error => {
                         if (requestId === activeEvaluationRequest) {
-                            stopEvaluationProgress();
                             console.error("Error fetching AI evaluation:", error);
-                            evaluation.textContent = "Unable to load the AI evaluation.";
+                            showEvaluationError("Unable to load the AI evaluation.");
                         }
                     });
                 } else {
@@ -1535,28 +2083,54 @@
                 }
 
             } catch (error) {
+                if (requestId !== activeEvaluationRequest) return;
                 stopEvaluationProgress();
                 console.error("Error fetching forecast:", error);
                 forecastResult.textContent = `Unable to load forecast: ${error.message}`;
                 evaluation.textContent = "The AI evaluation could not be started.";
             } finally {
-                forecastSubmit.disabled = false;
+                if (requestId === activeEvaluationRequest) forecastSubmit.disabled = false;
             }
+        }
+
+        forecastForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            currentForecastSelection = {
+                state: stateSelect.value,
+                city: citySelect.selectedOptions[0].textContent,
+                station_id: citySelect.value,
+                anchorDate: dateSelect.value,
+                startDate: forecastTabDates(dateSelect.value)[0],
+            };
+            currentForecastResult = null;
+            currentEvaluationDate = null;
+            renderForecastTabs(currentForecastSelection.anchorDate, dateSelect.value, currentForecastSelection.startDate);
+            await loadForecast(currentForecastSelection, dateSelect.value);
         });
 
         function createEvaluationProgressMessage() {
+            stopEvaluationProgress();
             const message = document.createElement("p");
-            message.append(document.createTextNode("Your AI response may take some time"));
+            message.className = "evaluation-progress";
+            message.setAttribute("role", "status");
+            const spinner = document.createElement("span");
+            spinner.className = "evaluation-spinner";
+            spinner.setAttribute("aria-hidden", "true");
+            const text = document.createElement("span");
+            text.append(document.createTextNode("Your AI response may take some time"));
             const dots = document.createElement("span");
             dots.className = "progress-dots";
             dots.setAttribute("aria-hidden", "true");
             dots.textContent = "...";
-            message.append(dots);
-            let dotCount = 3;
-            evaluationProgressTimer = setInterval(() => {
-                dotCount = (dotCount + 1) % 4;
-                dots.textContent = ".".repeat(dotCount);
-            }, 600);
+            text.append(dots);
+            message.append(spinner, text);
+            if (!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+                let dotCount = 3;
+                evaluationProgressTimer = setInterval(() => {
+                    dotCount = (dotCount + 1) % 4;
+                    dots.textContent = ".".repeat(dotCount);
+                }, 600);
+            }
             return message;
         }
 

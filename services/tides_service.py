@@ -38,3 +38,18 @@ def get_tides_from_station_id_and_dates(
 
     tide_data = get_tide_data(station_id, begin_date, end_date)
     return tide_data["predictions"]
+
+
+def get_tides_for_date_range(
+    station_id: str, start_date: date, forecast_days: int
+) -> list[dict]:
+    if not 1 <= forecast_days <= 7:
+        raise ValueError("Forecast days must be between 1 and 7.")
+
+    end_date = start_date + timedelta(days=forecast_days - 1)
+    tide_data = get_tide_data(
+        station_id,
+        start_date.strftime("%Y%m%d"),
+        end_date.strftime("%Y%m%d"),
+    )
+    return tide_data["predictions"]

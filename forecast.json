@@ -1,0 +1,2508 @@
+{
+  "city": "Fort Lauderdale, Andrews Ave. Bridge",
+  "city_lat": "26.11829948425293",
+  "city_long": "-80.1449966430664",
+  "date": "2026-11-21",
+  "precipitation_probability": 51,
+  "start_time": "2026-11-21 12:00",
+  "temp": 83,
+  "water_temperature": {
+    "source": "NOAA CO-OPS",
+    "station": {
+      "station_id": "8722956",
+      "name": "South Port Everglades",
+      "latitude": 26.081667,
+      "longitude": -80.11667,
+      "distance_miles": 3.0814706801347365
+    },
+    "observed_at": "2026-11-20T16:30:00-05:00",
+    "temperature_f": 86.5,
+    "error": null
+  },
+  "wind_speed_max": 9.21,
+  "wind_speed_min": 2.3,
+  "wind_direction": "SW",
+  "moon_current_phase": "Waxing Gibbous",
+  "moon_closest_phase": "Full Moon",
+  "moon_closest_phase_date": "2026-11-24",
+  "moon_brightness": "89%",
+  "predictions": [
+    {
+      "t": "2026-11-21 05:42",
+      "v": "2.653",
+      "type": "H"
+    },
+    {
+      "t": "2026-11-21 11:56",
+      "v": "0.677",
+      "type": "L"
+    },
+    {
+      "t": "2026-11-21 17:48",
+      "v": "2.47",
+      "type": "H"
+    },
+    {
+      "t": "2026-11-22 00:08",
+      "v": "0.252",
+      "type": "L"
+    },
+    {
+      "t": "2026-11-22 06:33",
+      "v": "2.79",
+      "type": "H"
+    },
+    {
+      "t": "2026-11-22 12:48",
+      "v": "0.589",
+      "type": "L"
+    },
+    {
+      "t": "2026-11-22 18:38",
+      "v": "2.531",
+      "type": "H"
+    },
+    {
+      "t": "2026-11-23 00:58",
+      "v": "0.115",
+      "type": "L"
+    },
+    {
+      "t": "2026-11-23 07:23",
+      "v": "2.902",
+      "type": "H"
+    },
+    {
+      "t": "2026-11-23 13:39",
+      "v": "0.505",
+      "type": "L"
+    },
+    {
+      "t": "2026-11-23 19:28",
+      "v": "2.586",
+      "type": "H"
+    },
+    {
+      "t": "2026-11-24 01:48",
+      "v": "0.009",
+      "type": "L"
+    },
+    {
+      "t": "2026-11-24 08:13",
+      "v": "2.971",
+      "type": "H"
+    },
+    {
+      "t": "2026-11-24 14:28",
+      "v": "0.44",
+      "type": "L"
+    },
+    {
+      "t": "2026-11-24 20:18",
+      "v": "2.621",
+      "type": "H"
+    },
+    {
+      "t": "2026-11-25 02:37",
+      "v": "-0.046",
+      "type": "L"
+    },
+    {
+      "t": "2026-11-25 09:03",
+      "v": "2.987",
+      "type": "H"
+    },
+    {
+      "t": "2026-11-25 15:18",
+      "v": "0.405",
+      "type": "L"
+    },
+    {
+      "t": "2026-11-25 21:10",
+      "v": "2.622",
+      "type": "H"
+    },
+    {
+      "t": "2026-11-26 03:28",
+      "v": "-0.037",
+      "type": "L"
+    },
+    {
+      "t": "2026-11-26 09:55",
+      "v": "2.951",
+      "type": "H"
+    },
+    {
+      "t": "2026-11-26 16:10",
+      "v": "0.395",
+      "type": "L"
+    },
+    {
+      "t": "2026-11-26 22:04",
+      "v": "2.591",
+      "type": "H"
+    },
+    {
+      "t": "2026-11-27 04:22",
+      "v": "0.031",
+      "type": "L"
+    },
+    {
+      "t": "2026-11-27 10:48",
+      "v": "2.877",
+      "type": "H"
+    },
+    {
+      "t": "2026-11-27 17:05",
+      "v": "0.398",
+      "type": "L"
+    },
+    {
+      "t": "2026-11-27 23:02",
+      "v": "2.539",
+      "type": "H"
+    }
+  ],
+  "station": {
+    "id": "8722937",
+    "name": "Fort Lauderdale, Andrews Ave. Bridge",
+    "state": "FL",
+    "lat": 26.11829948425293,
+    "lng": -80.1449966430664,
+    "county": "Broward County"
+  },
+  "forecast_start_date": "2026-11-21",
+  "daily_forecasts": [
+    {
+      "date": "2026-11-21",
+      "precipitation_probability": 51,
+      "start_time": "2026-11-21 12:00",
+      "temp": 83,
+      "wind_speed_max": 9.21,
+      "wind_speed_min": 2.3,
+      "wind_direction": "SW",
+      "detailed_forecast": "A chance of showers and thunderstorms between noon and 4pm, then a chance of showers and thunderstorms. Partly sunny, with a high near 83. Southwest wind 2 to 9 mph. Chance of precipitation is 50%. New rainfall amounts less than a tenth of an inch possible.",
+      "moon_current_phase": "Waxing Gibbous",
+      "moon_closest_phase": "Full Moon",
+      "moon_closest_phase_date": "2026-11-24",
+      "moon_brightness": "89%",
+      "sunrise": "06:43",
+      "sunset": "17:29",
+      "moonrise": "15:07",
+      "moonset": "03:26",
+      "pressure": {
+        "source": "NOAA CO-OPS",
+        "station": null,
+        "observed_at": null,
+        "current_pressure_inhg": null,
+        "pressure_3_hours_ago_inhg": null,
+        "change_3h_inhg": null,
+        "trend": null,
+        "outlook": null,
+        "error": "No pressure observation for this date; pressure forecasts are unavailable."
+      }
+    },
+    {
+      "date": "2026-11-22",
+      "precipitation_probability": 34,
+      "start_time": "2026-11-22 04:00",
+      "temp": 84,
+      "wind_speed_max": 8.06,
+      "wind_speed_min": 3.45,
+      "wind_direction": "SW",
+      "detailed_forecast": "A chance of rain showers after 1pm. Sunny, with a high near 84. Southwest wind 3 to 8 mph. Chance of precipitation is 30%.",
+      "moon_current_phase": "Waxing Gibbous",
+      "moon_closest_phase": "Full Moon",
+      "moon_closest_phase_date": "2026-11-24",
+      "moon_brightness": "95%",
+      "sunrise": "06:44",
+      "sunset": "17:29",
+      "moonrise": "15:47",
+      "moonset": "04:29",
+      "pressure": {
+        "source": "NOAA CO-OPS",
+        "station": null,
+        "observed_at": null,
+        "current_pressure_inhg": null,
+        "pressure_3_hours_ago_inhg": null,
+        "change_3h_inhg": null,
+        "trend": null,
+        "outlook": null,
+        "error": "No pressure observation for this date; pressure forecasts are unavailable."
+      }
+    },
+    {
+      "date": "2026-11-23",
+      "precipitation_probability": 8,
+      "start_time": "2026-11-23 19:00",
+      "temp": 81,
+      "wind_speed_max": 4.6,
+      "wind_speed_min": 4.6,
+      "wind_direction": "N",
+      "detailed_forecast": "Partly sunny, with a high near 81. North wind around 5 mph.",
+      "moon_current_phase": "Waxing Gibbous",
+      "moon_closest_phase": "Full Moon",
+      "moon_closest_phase_date": "2026-11-24",
+      "moon_brightness": "99%",
+      "sunrise": "06:45",
+      "sunset": "17:29",
+      "moonrise": "16:33",
+      "moonset": "05:37",
+      "pressure": {
+        "source": "NOAA CO-OPS",
+        "station": null,
+        "observed_at": null,
+        "current_pressure_inhg": null,
+        "pressure_3_hours_ago_inhg": null,
+        "change_3h_inhg": null,
+        "trend": null,
+        "outlook": null,
+        "error": "No pressure observation for this date; pressure forecasts are unavailable."
+      }
+    },
+    {
+      "date": "2026-11-24",
+      "precipitation_probability": 46,
+      "start_time": "2026-11-24 00:00",
+      "temp": 80,
+      "wind_speed_max": 6.9,
+      "wind_speed_min": 6.9,
+      "wind_direction": "NE",
+      "detailed_forecast": "A chance of rain showers. Mostly cloudy, with a high near 80. Northeast wind around 7 mph. Chance of precipitation is 50%.",
+      "moon_current_phase": "Full Moon",
+      "moon_closest_phase": "Full Moon",
+      "moon_closest_phase_date": "2026-11-24",
+      "moon_brightness": "100%",
+      "sunrise": "06:46",
+      "sunset": "17:29",
+      "moonrise": "17:27",
+      "moonset": "06:47",
+      "pressure": {
+        "source": "NOAA CO-OPS",
+        "station": null,
+        "observed_at": null,
+        "current_pressure_inhg": null,
+        "pressure_3_hours_ago_inhg": null,
+        "change_3h_inhg": null,
+        "trend": null,
+        "outlook": null,
+        "error": "No pressure observation for this date; pressure forecasts are unavailable."
+      }
+    },
+    {
+      "date": "2026-11-25",
+      "precipitation_probability": 46,
+      "start_time": "2026-11-25 00:00",
+      "temp": 81,
+      "wind_speed_max": 8.06,
+      "wind_speed_min": 4.6,
+      "wind_direction": "NE",
+      "detailed_forecast": "A chance of showers and thunderstorms. Mostly cloudy, with a high near 81. Chance of precipitation is 50%.",
+      "moon_current_phase": "Waning Gibbous",
+      "moon_closest_phase": "Full Moon",
+      "moon_closest_phase_date": "2026-11-24",
+      "moon_brightness": "98%",
+      "sunrise": "06:46",
+      "sunset": "17:29",
+      "moonrise": "18:30",
+      "moonset": "07:59",
+      "pressure": {
+        "source": "NOAA CO-OPS",
+        "station": null,
+        "observed_at": null,
+        "current_pressure_inhg": null,
+        "pressure_3_hours_ago_inhg": null,
+        "change_3h_inhg": null,
+        "trend": null,
+        "outlook": null,
+        "error": "No pressure observation for this date; pressure forecasts are unavailable."
+      }
+    },
+    {
+      "date": "2026-11-26",
+      "precipitation_probability": 12,
+      "start_time": "2026-11-26 00:00",
+      "temp": 79,
+      "wind_speed_max": 10.36,
+      "wind_speed_min": 6.9,
+      "wind_direction": "NW",
+      "detailed_forecast": "Mostly sunny, with a high near 79.",
+      "moon_current_phase": "Waning Gibbous",
+      "moon_closest_phase": "Full Moon",
+      "moon_closest_phase_date": "2026-11-24",
+      "moon_brightness": "93%",
+      "sunrise": "06:47",
+      "sunset": "17:28",
+      "moonrise": "19:39",
+      "moonset": "09:06",
+      "pressure": {
+        "source": "NOAA CO-OPS",
+        "station": null,
+        "observed_at": null,
+        "current_pressure_inhg": null,
+        "pressure_3_hours_ago_inhg": null,
+        "change_3h_inhg": null,
+        "trend": null,
+        "outlook": null,
+        "error": "No pressure observation for this date; pressure forecasts are unavailable."
+      }
+    },
+    {
+      "date": "2026-11-27",
+      "precipitation_probability": null,
+      "start_time": "2026-11-27 13:00",
+      "temp": null,
+      "wind_speed_max": null,
+      "wind_speed_min": null,
+      "wind_direction": null,
+      "detailed_forecast": null,
+      "moon_current_phase": "Waning Gibbous",
+      "moon_closest_phase": "Full Moon",
+      "moon_closest_phase_date": "2026-11-24",
+      "moon_brightness": "86%",
+      "sunrise": "06:48",
+      "sunset": "17:28",
+      "moonrise": "20:50",
+      "moonset": "10:05",
+      "pressure": {
+        "source": "NOAA CO-OPS",
+        "station": null,
+        "observed_at": null,
+        "current_pressure_inhg": null,
+        "pressure_3_hours_ago_inhg": null,
+        "change_3h_inhg": null,
+        "trend": null,
+        "outlook": null,
+        "error": "No pressure observation for this date; pressure forecasts are unavailable."
+      }
+    }
+  ],
+  "weather_forecast": [
+    {
+      "name": "Saturday",
+      "start_time": "2026-11-21T06:00:00-05:00",
+      "end_time": "2026-11-21T18:00:00-05:00",
+      "temperature": 28.333333333333332,
+      "temperature_unit": "wmoUnit:degC",
+      "wind_speed": {
+        "unitCode": "wmoUnit:km_h-1",
+        "maxValue": 14.816,
+        "minValue": 3.704
+      },
+      "wind_direction": "SW",
+      "precipitation_probability": 51,
+      "detailed_forecast": "A chance of showers and thunderstorms between noon and 4pm, then a chance of showers and thunderstorms. Partly sunny, with a high near 83. Southwest wind 2 to 9 mph. Chance of precipitation is 50%. New rainfall amounts less than a tenth of an inch possible."
+    },
+    {
+      "name": "Saturday Night",
+      "start_time": "2026-11-21T18:00:00-05:00",
+      "end_time": "2026-11-22T06:00:00-05:00",
+      "temperature": 21.666666666666668,
+      "temperature_unit": "wmoUnit:degC",
+      "wind_speed": {
+        "unitCode": "wmoUnit:km_h-1",
+        "value": 9.26
+      },
+      "wind_direction": "SW",
+      "precipitation_probability": 29,
+      "detailed_forecast": "A chance of showers and thunderstorms before 8pm, then a slight chance of showers and thunderstorms between 8pm and 5am. Mostly clear, with a low around 71. Southwest wind around 6 mph. Chance of precipitation is 30%."
+    },
+    {
+      "name": "Sunday",
+      "start_time": "2026-11-22T06:00:00-05:00",
+      "end_time": "2026-11-22T18:00:00-05:00",
+      "temperature": 28.88888888888889,
+      "temperature_unit": "wmoUnit:degC",
+      "wind_speed": {
+        "unitCode": "wmoUnit:km_h-1",
+        "maxValue": 12.964,
+        "minValue": 5.556
+      },
+      "wind_direction": "SW",
+      "precipitation_probability": 34,
+      "detailed_forecast": "A chance of rain showers after 1pm. Sunny, with a high near 84. Southwest wind 3 to 8 mph. Chance of precipitation is 30%."
+    },
+    {
+      "name": "Sunday Night",
+      "start_time": "2026-11-22T18:00:00-05:00",
+      "end_time": "2026-11-23T06:00:00-05:00",
+      "temperature": 20.555555555555557,
+      "temperature_unit": "wmoUnit:degC",
+      "wind_speed": {
+        "unitCode": "wmoUnit:km_h-1",
+        "value": 5.556
+      },
+      "wind_direction": "W",
+      "precipitation_probability": 34,
+      "detailed_forecast": "A chance of rain showers before 7pm. Partly cloudy, with a low around 69. West wind around 3 mph. Chance of precipitation is 30%."
+    },
+    {
+      "name": "Monday",
+      "start_time": "2026-11-23T06:00:00-05:00",
+      "end_time": "2026-11-23T18:00:00-05:00",
+      "temperature": 27.22222222222222,
+      "temperature_unit": "wmoUnit:degC",
+      "wind_speed": {
+        "unitCode": "wmoUnit:km_h-1",
+        "value": 7.408
+      },
+      "wind_direction": "N",
+      "precipitation_probability": 8,
+      "detailed_forecast": "Partly sunny, with a high near 81. North wind around 5 mph."
+    },
+    {
+      "name": "Monday Night",
+      "start_time": "2026-11-23T18:00:00-05:00",
+      "end_time": "2026-11-24T06:00:00-05:00",
+      "temperature": 21.11111111111111,
+      "temperature_unit": "wmoUnit:degC",
+      "wind_speed": {
+        "unitCode": "wmoUnit:km_h-1",
+        "value": 5.556
+      },
+      "wind_direction": "NE",
+      "precipitation_probability": 31,
+      "detailed_forecast": "A chance of rain showers after 7pm. Mostly cloudy, with a low around 70. Northeast wind around 3 mph. Chance of precipitation is 30%."
+    },
+    {
+      "name": "Tuesday",
+      "start_time": "2026-11-24T06:00:00-05:00",
+      "end_time": "2026-11-24T18:00:00-05:00",
+      "temperature": 26.666666666666668,
+      "temperature_unit": "wmoUnit:degC",
+      "wind_speed": {
+        "unitCode": "wmoUnit:km_h-1",
+        "value": 11.112
+      },
+      "wind_direction": "NE",
+      "precipitation_probability": 46,
+      "detailed_forecast": "A chance of rain showers. Mostly cloudy, with a high near 80. Northeast wind around 7 mph. Chance of precipitation is 50%."
+    },
+    {
+      "name": "Tuesday Night",
+      "start_time": "2026-11-24T18:00:00-05:00",
+      "end_time": "2026-11-25T06:00:00-05:00",
+      "temperature": 21.11111111111111,
+      "temperature_unit": "wmoUnit:degC",
+      "wind_speed": {
+        "unitCode": "wmoUnit:km_h-1",
+        "value": 7.408
+      },
+      "wind_direction": "NE",
+      "precipitation_probability": 46,
+      "detailed_forecast": "A chance of rain showers before 7pm, then a chance of showers and thunderstorms. Mostly cloudy, with a low around 70. Chance of precipitation is 50%."
+    },
+    {
+      "name": "Wednesday",
+      "start_time": "2026-11-25T06:00:00-05:00",
+      "end_time": "2026-11-25T18:00:00-05:00",
+      "temperature": 27.22222222222222,
+      "temperature_unit": "wmoUnit:degC",
+      "wind_speed": {
+        "unitCode": "wmoUnit:km_h-1",
+        "maxValue": 12.964,
+        "minValue": 7.408
+      },
+      "wind_direction": "NE",
+      "precipitation_probability": 46,
+      "detailed_forecast": "A chance of showers and thunderstorms. Mostly cloudy, with a high near 81. Chance of precipitation is 50%."
+    },
+    {
+      "name": "Wednesday Night",
+      "start_time": "2026-11-25T18:00:00-05:00",
+      "end_time": "2026-11-26T06:00:00-05:00",
+      "temperature": 20.0,
+      "temperature_unit": "wmoUnit:degC",
+      "wind_speed": {
+        "unitCode": "wmoUnit:km_h-1",
+        "value": 9.26
+      },
+      "wind_direction": "NW",
+      "precipitation_probability": 31,
+      "detailed_forecast": "A chance of showers and thunderstorms before 1am. Mostly cloudy, with a low around 68. Chance of precipitation is 30%."
+    },
+    {
+      "name": "Thanksgiving Day",
+      "start_time": "2026-11-26T06:00:00-05:00",
+      "end_time": "2026-11-26T18:00:00-05:00",
+      "temperature": 26.11111111111111,
+      "temperature_unit": "wmoUnit:degC",
+      "wind_speed": {
+        "unitCode": "wmoUnit:km_h-1",
+        "maxValue": 16.668,
+        "minValue": 11.112
+      },
+      "wind_direction": "NW",
+      "precipitation_probability": 12,
+      "detailed_forecast": "Mostly sunny, with a high near 79."
+    },
+    {
+      "name": "Thursday Night",
+      "start_time": "2026-11-26T18:00:00-05:00",
+      "end_time": "2026-11-27T06:00:00-05:00",
+      "temperature": 18.333333333333332,
+      "temperature_unit": "wmoUnit:degC",
+      "wind_speed": {
+        "unitCode": "wmoUnit:km_h-1",
+        "value": 12.964
+      },
+      "wind_direction": "NW",
+      "precipitation_probability": 5,
+      "detailed_forecast": "Partly cloudy, with a low around 65."
+    }
+  ],
+  "precipitation_forecast": [
+    {
+      "start_time": "2026-11-21T17:00:00Z",
+      "end_time": "2026-11-21T18:00:00Z",
+      "conditions": [
+        {
+          "weather": "rain_showers",
+          "coverage": "slight_chance"
+        }
+      ]
+    },
+    {
+      "start_time": "2026-11-21T18:00:00Z",
+      "end_time": "2026-11-21T21:00:00Z",
+      "conditions": [
+        {
+          "weather": "rain_showers",
+          "coverage": "chance"
+        }
+      ]
+    },
+    {
+      "start_time": "2026-11-21T21:00:00Z",
+      "end_time": "2026-11-22T01:00:00Z",
+      "conditions": [
+        {
+          "weather": "rain_showers",
+          "coverage": "chance"
+        }
+      ]
+    },
+    {
+      "start_time": "2026-11-22T01:00:00Z",
+      "end_time": "2026-11-22T02:00:00Z",
+      "conditions": [
+        {
+          "weather": "rain_showers",
+          "coverage": "slight_chance"
+        }
+      ]
+    },
+    {
+      "start_time": "2026-11-22T03:00:00Z",
+      "end_time": "2026-11-22T04:00:00Z",
+      "conditions": [
+        {
+          "weather": "rain_showers",
+          "coverage": "slight_chance"
+        }
+      ]
+    },
+    {
+      "start_time": "2026-11-22T09:00:00Z",
+      "end_time": "2026-11-22T10:00:00Z",
+      "conditions": [
+        {
+          "weather": "rain_showers",
+          "coverage": "slight_chance"
+        }
+      ]
+    },
+    {
+      "start_time": "2026-11-22T18:00:00Z",
+      "end_time": "2026-11-23T00:00:00Z",
+      "conditions": [
+        {
+          "weather": "rain_showers",
+          "coverage": "chance"
+        }
+      ]
+    },
+    {
+      "start_time": "2026-11-24T00:00:00Z",
+      "end_time": "2026-11-24T06:00:00Z",
+      "conditions": [
+        {
+          "weather": "rain_showers",
+          "coverage": "slight_chance"
+        }
+      ]
+    },
+    {
+      "start_time": "2026-11-24T06:00:00Z",
+      "end_time": "2026-11-25T00:00:00Z",
+      "conditions": [
+        {
+          "weather": "rain_showers",
+          "coverage": "chance"
+        }
+      ]
+    },
+    {
+      "start_time": "2026-11-25T00:00:00Z",
+      "end_time": "2026-11-25T12:00:00Z",
+      "conditions": [
+        {
+          "weather": "rain_showers",
+          "coverage": "chance"
+        }
+      ]
+    },
+    {
+      "start_time": "2026-11-25T12:00:00Z",
+      "end_time": "2026-11-25T18:00:00Z",
+      "conditions": [
+        {
+          "weather": "rain_showers",
+          "coverage": "chance"
+        }
+      ]
+    },
+    {
+      "start_time": "2026-11-25T18:00:00Z",
+      "end_time": "2026-11-26T00:00:00Z",
+      "conditions": [
+        {
+          "weather": "rain_showers",
+          "coverage": "chance"
+        }
+      ]
+    },
+    {
+      "start_time": "2026-11-26T00:00:00Z",
+      "end_time": "2026-11-26T06:00:00Z",
+      "conditions": [
+        {
+          "weather": "rain_showers",
+          "coverage": "slight_chance"
+        }
+      ]
+    },
+    {
+      "start_time": "2026-11-27T18:00:00Z",
+      "end_time": "2026-11-28T00:00:00Z",
+      "conditions": [
+        {
+          "weather": "rain_showers",
+          "coverage": "slight_chance"
+        }
+      ]
+    },
+    {
+      "start_time": "2026-11-28T00:00:00Z",
+      "end_time": "2026-11-28T01:00:00Z",
+      "conditions": [
+        {
+          "weather": "rain_showers",
+          "coverage": "chance"
+        }
+      ]
+    }
+  ],
+  "nearshore": {
+    "source": "NWS forecastGridData",
+    "timezone": "America/New_York",
+    "forecast_days": 7,
+    "grid": {
+      "office": "MFL",
+      "x": 112,
+      "y": 66,
+      "lat": 26.1177,
+      "lng": -80.09264999999999,
+      "distance_km": 5.226752496415119,
+      "inferred": true
+    },
+    "wave_height": {
+      "unit": "ft",
+      "values": [
+        {
+          "valid_start": "2026-11-20T15:00:00Z",
+          "duration": "P2DT11H",
+          "value": 2.000000064
+        },
+        {
+          "valid_start": "2026-11-23T02:00:00Z",
+          "duration": "PT11H",
+          "value": 1.000000032
+        },
+        {
+          "valid_start": "2026-11-23T13:00:00Z",
+          "duration": "PT11H",
+          "value": 2.000000064
+        },
+        {
+          "valid_start": "2026-11-24T00:00:00Z",
+          "duration": "P2DT9H",
+          "value": 1.000000032
+        },
+        {
+          "valid_start": "2026-11-26T09:00:00Z",
+          "duration": "PT3H",
+          "value": 2.000000064
+        },
+        {
+          "valid_start": "2026-11-26T12:00:00Z",
+          "duration": "PT22H",
+          "value": 3.000000096
+        }
+      ]
+    },
+    "wave_period": {
+      "unit": "s",
+      "values": [
+        {
+          "valid_start": "2026-11-21T01:00:00Z",
+          "duration": "P3DT12H",
+          "value": 8.0
+        },
+        {
+          "valid_start": "2026-11-24T13:00:00Z",
+          "duration": "P1DT5H",
+          "value": 3.0
+        },
+        {
+          "valid_start": "2026-11-25T18:00:00Z",
+          "duration": "PT12H",
+          "value": 4.0
+        },
+        {
+          "valid_start": "2026-11-26T06:00:00Z",
+          "duration": "PT1H",
+          "value": 8.0
+        },
+        {
+          "valid_start": "2026-11-26T07:00:00Z",
+          "duration": "PT4H",
+          "value": 11.0
+        },
+        {
+          "valid_start": "2026-11-26T11:00:00Z",
+          "duration": "PT1H",
+          "value": 10.0
+        },
+        {
+          "valid_start": "2026-11-26T12:00:00Z",
+          "duration": "PT1H",
+          "value": 8.0
+        },
+        {
+          "valid_start": "2026-11-26T13:00:00Z",
+          "duration": "PT1H",
+          "value": 7.0
+        },
+        {
+          "valid_start": "2026-11-26T14:00:00Z",
+          "duration": "PT2H",
+          "value": 6.0
+        },
+        {
+          "valid_start": "2026-11-26T16:00:00Z",
+          "duration": "PT2H",
+          "value": 7.0
+        },
+        {
+          "valid_start": "2026-11-26T18:00:00Z",
+          "duration": "PT13H",
+          "value": 8.0
+        }
+      ]
+    },
+    "wave_direction": {
+      "unit": "degrees",
+      "values": []
+    },
+    "primary_swell_height": {
+      "unit": "ft",
+      "values": [
+        {
+          "valid_start": "2026-11-20T14:00:00Z",
+          "duration": "P3DT8H",
+          "value": 1.000000032
+        },
+        {
+          "valid_start": "2026-11-23T22:00:00Z",
+          "duration": "P2DT10H",
+          "value": 0.0
+        },
+        {
+          "valid_start": "2026-11-26T08:00:00Z",
+          "duration": "PT4H",
+          "value": 1.000000032
+        }
+      ]
+    },
+    "primary_swell_period": {
+      "unit": "s",
+      "values": []
+    },
+    "primary_swell_direction": {
+      "unit": "degrees",
+      "values": [
+        {
+          "valid_start": "2026-11-20T14:00:00Z",
+          "duration": "P5DT22H",
+          "value": 0.0
+        }
+      ]
+    },
+    "secondary_swell_height": {
+      "unit": "ft",
+      "values": []
+    },
+    "secondary_swell_period": {
+      "unit": "s",
+      "values": []
+    },
+    "secondary_swell_direction": {
+      "unit": "degrees",
+      "values": []
+    },
+    "wind_wave_height": {
+      "unit": "ft",
+      "values": []
+    },
+    "wind_wave_period": {
+      "unit": "s",
+      "values": []
+    },
+    "wind_wave_direction": {
+      "unit": "degrees",
+      "values": []
+    },
+    "wind_speed": {
+      "unit": "mph",
+      "values": [
+        {
+          "valid_start": "2026-11-21T05:00:00Z",
+          "duration": "PT2H",
+          "value": 8.055453644
+        },
+        {
+          "valid_start": "2026-11-21T07:00:00Z",
+          "duration": "PT4H",
+          "value": 6.904674552
+        },
+        {
+          "valid_start": "2026-11-21T11:00:00Z",
+          "duration": "PT2H",
+          "value": 5.75389546
+        },
+        {
+          "valid_start": "2026-11-21T13:00:00Z",
+          "duration": "PT2H",
+          "value": 6.904674552
+        },
+        {
+          "valid_start": "2026-11-21T15:00:00Z",
+          "duration": "PT1H",
+          "value": 9.206232736
+        },
+        {
+          "valid_start": "2026-11-21T16:00:00Z",
+          "duration": "PT1H",
+          "value": 10.357011828
+        },
+        {
+          "valid_start": "2026-11-21T17:00:00Z",
+          "duration": "PT1H",
+          "value": 11.50779092
+        },
+        {
+          "valid_start": "2026-11-21T18:00:00Z",
+          "duration": "PT2H",
+          "value": 12.658570012
+        },
+        {
+          "valid_start": "2026-11-21T20:00:00Z",
+          "duration": "PT3H",
+          "value": 11.50779092
+        },
+        {
+          "valid_start": "2026-11-21T23:00:00Z",
+          "duration": "PT3H",
+          "value": 10.357011828
+        },
+        {
+          "valid_start": "2026-11-22T02:00:00Z",
+          "duration": "PT4H",
+          "value": 9.206232736
+        },
+        {
+          "valid_start": "2026-11-22T06:00:00Z",
+          "duration": "PT1H",
+          "value": 8.055453644
+        },
+        {
+          "valid_start": "2026-11-22T07:00:00Z",
+          "duration": "PT3H",
+          "value": 9.206232736
+        },
+        {
+          "valid_start": "2026-11-22T10:00:00Z",
+          "duration": "PT6H",
+          "value": 8.055453644
+        },
+        {
+          "valid_start": "2026-11-22T16:00:00Z",
+          "duration": "PT1H",
+          "value": 9.206232736
+        },
+        {
+          "valid_start": "2026-11-22T17:00:00Z",
+          "duration": "PT3H",
+          "value": 10.357011828
+        },
+        {
+          "valid_start": "2026-11-22T20:00:00Z",
+          "duration": "PT1H",
+          "value": 9.206232736
+        },
+        {
+          "valid_start": "2026-11-22T21:00:00Z",
+          "duration": "PT1H",
+          "value": 8.055453644
+        },
+        {
+          "valid_start": "2026-11-22T22:00:00Z",
+          "duration": "PT1H",
+          "value": 6.904674552
+        },
+        {
+          "valid_start": "2026-11-22T23:00:00Z",
+          "duration": "PT1H",
+          "value": 5.75389546
+        },
+        {
+          "valid_start": "2026-11-23T00:00:00Z",
+          "duration": "PT5H",
+          "value": 4.603116368
+        },
+        {
+          "valid_start": "2026-11-23T05:00:00Z",
+          "duration": "PT3H",
+          "value": 5.75389546
+        },
+        {
+          "valid_start": "2026-11-23T08:00:00Z",
+          "duration": "PT12H",
+          "value": 6.904674552
+        },
+        {
+          "valid_start": "2026-11-23T20:00:00Z",
+          "duration": "PT9H",
+          "value": 5.75389546
+        },
+        {
+          "valid_start": "2026-11-24T05:00:00Z",
+          "duration": "PT3H",
+          "value": 4.603116368
+        },
+        {
+          "valid_start": "2026-11-24T08:00:00Z",
+          "duration": "PT3H",
+          "value": 5.75389546
+        },
+        {
+          "valid_start": "2026-11-24T11:00:00Z",
+          "duration": "PT3H",
+          "value": 6.904674552
+        },
+        {
+          "valid_start": "2026-11-24T14:00:00Z",
+          "duration": "PT3H",
+          "value": 8.055453644
+        },
+        {
+          "valid_start": "2026-11-24T17:00:00Z",
+          "duration": "PT2H",
+          "value": 9.206232736
+        },
+        {
+          "valid_start": "2026-11-24T19:00:00Z",
+          "duration": "PT2H",
+          "value": 8.055453644
+        },
+        {
+          "valid_start": "2026-11-24T21:00:00Z",
+          "duration": "PT5H",
+          "value": 6.904674552
+        },
+        {
+          "valid_start": "2026-11-25T02:00:00Z",
+          "duration": "PT5H",
+          "value": 5.75389546
+        },
+        {
+          "valid_start": "2026-11-25T07:00:00Z",
+          "duration": "PT2H",
+          "value": 6.904674552
+        },
+        {
+          "valid_start": "2026-11-25T09:00:00Z",
+          "duration": "PT7H",
+          "value": 8.055453644
+        },
+        {
+          "valid_start": "2026-11-25T16:00:00Z",
+          "duration": "PT1H",
+          "value": 9.206232736
+        },
+        {
+          "valid_start": "2026-11-25T17:00:00Z",
+          "duration": "PT3H",
+          "value": 10.357011828
+        },
+        {
+          "valid_start": "2026-11-25T20:00:00Z",
+          "duration": "PT1H",
+          "value": 9.206232736
+        },
+        {
+          "valid_start": "2026-11-25T21:00:00Z",
+          "duration": "PT2H",
+          "value": 8.055453644
+        },
+        {
+          "valid_start": "2026-11-25T23:00:00Z",
+          "duration": "PT6H",
+          "value": 6.904674552
+        },
+        {
+          "valid_start": "2026-11-26T05:00:00Z",
+          "duration": "PT3H",
+          "value": 8.055453644
+        },
+        {
+          "valid_start": "2026-11-26T08:00:00Z",
+          "duration": "PT2H",
+          "value": 9.206232736
+        },
+        {
+          "valid_start": "2026-11-26T10:00:00Z",
+          "duration": "PT2H",
+          "value": 10.357011828
+        },
+        {
+          "valid_start": "2026-11-26T12:00:00Z",
+          "duration": "PT5H",
+          "value": 11.50779092
+        },
+        {
+          "valid_start": "2026-11-26T17:00:00Z",
+          "duration": "PT5H",
+          "value": 12.658570012
+        },
+        {
+          "valid_start": "2026-11-26T22:00:00Z",
+          "duration": "PT2H",
+          "value": 11.50779092
+        },
+        {
+          "valid_start": "2026-11-27T00:00:00Z",
+          "duration": "PT2H",
+          "value": 10.357011828
+        },
+        {
+          "valid_start": "2026-11-27T02:00:00Z",
+          "duration": "PT6H",
+          "value": 11.50779092
+        },
+        {
+          "valid_start": "2026-11-27T08:00:00Z",
+          "duration": "PT15H",
+          "value": 12.658570012
+        },
+        {
+          "valid_start": "2026-11-27T23:00:00Z",
+          "duration": "PT2H",
+          "value": 11.50779092
+        }
+      ]
+    },
+    "wind_direction": {
+      "unit": "degrees",
+      "values": [
+        {
+          "valid_start": "2026-11-21T05:00:00Z",
+          "duration": "PT8H",
+          "value": 230.0
+        },
+        {
+          "valid_start": "2026-11-21T13:00:00Z",
+          "duration": "PT4H",
+          "value": 220.0
+        },
+        {
+          "valid_start": "2026-11-21T17:00:00Z",
+          "duration": "PT2H",
+          "value": 210.0
+        },
+        {
+          "valid_start": "2026-11-21T19:00:00Z",
+          "duration": "PT1H",
+          "value": 240.0
+        },
+        {
+          "valid_start": "2026-11-21T20:00:00Z",
+          "duration": "PT1H",
+          "value": 210.0
+        },
+        {
+          "valid_start": "2026-11-21T21:00:00Z",
+          "duration": "PT1H",
+          "value": 240.0
+        },
+        {
+          "valid_start": "2026-11-21T22:00:00Z",
+          "duration": "PT1H",
+          "value": 200.0
+        },
+        {
+          "valid_start": "2026-11-21T23:00:00Z",
+          "duration": "PT2H",
+          "value": 210.0
+        },
+        {
+          "valid_start": "2026-11-22T01:00:00Z",
+          "duration": "PT2H",
+          "value": 220.0
+        },
+        {
+          "valid_start": "2026-11-22T03:00:00Z",
+          "duration": "PT1H",
+          "value": 230.0
+        },
+        {
+          "valid_start": "2026-11-22T04:00:00Z",
+          "duration": "PT3H",
+          "value": 220.0
+        },
+        {
+          "valid_start": "2026-11-22T07:00:00Z",
+          "duration": "PT10H",
+          "value": 230.0
+        },
+        {
+          "valid_start": "2026-11-22T17:00:00Z",
+          "duration": "PT1H",
+          "value": 220.0
+        },
+        {
+          "valid_start": "2026-11-22T18:00:00Z",
+          "duration": "PT2H",
+          "value": 210.0
+        },
+        {
+          "valid_start": "2026-11-22T20:00:00Z",
+          "duration": "PT2H",
+          "value": 200.0
+        },
+        {
+          "valid_start": "2026-11-22T22:00:00Z",
+          "duration": "PT1H",
+          "value": 210.0
+        },
+        {
+          "valid_start": "2026-11-22T23:00:00Z",
+          "duration": "PT2H",
+          "value": 220.0
+        },
+        {
+          "valid_start": "2026-11-23T01:00:00Z",
+          "duration": "PT1H",
+          "value": 240.0
+        },
+        {
+          "valid_start": "2026-11-23T02:00:00Z",
+          "duration": "PT1H",
+          "value": 270.0
+        },
+        {
+          "valid_start": "2026-11-23T03:00:00Z",
+          "duration": "PT1H",
+          "value": 280.0
+        },
+        {
+          "valid_start": "2026-11-23T04:00:00Z",
+          "duration": "PT1H",
+          "value": 290.0
+        },
+        {
+          "valid_start": "2026-11-23T05:00:00Z",
+          "duration": "PT2H",
+          "value": 300.0
+        },
+        {
+          "valid_start": "2026-11-23T07:00:00Z",
+          "duration": "PT1H",
+          "value": 310.0
+        },
+        {
+          "valid_start": "2026-11-23T08:00:00Z",
+          "duration": "PT2H",
+          "value": 320.0
+        },
+        {
+          "valid_start": "2026-11-23T10:00:00Z",
+          "duration": "PT1H",
+          "value": 330.0
+        },
+        {
+          "valid_start": "2026-11-23T11:00:00Z",
+          "duration": "PT3H",
+          "value": 340.0
+        },
+        {
+          "valid_start": "2026-11-23T14:00:00Z",
+          "duration": "PT2H",
+          "value": 350.0
+        },
+        {
+          "valid_start": "2026-11-23T16:00:00Z",
+          "duration": "PT1H",
+          "value": 0.0
+        },
+        {
+          "valid_start": "2026-11-23T17:00:00Z",
+          "duration": "PT1H",
+          "value": 10.0
+        },
+        {
+          "valid_start": "2026-11-23T18:00:00Z",
+          "duration": "PT1H",
+          "value": 20.0
+        },
+        {
+          "valid_start": "2026-11-23T19:00:00Z",
+          "duration": "PT1H",
+          "value": 30.0
+        },
+        {
+          "valid_start": "2026-11-23T20:00:00Z",
+          "duration": "PT1H",
+          "value": 40.0
+        },
+        {
+          "valid_start": "2026-11-23T21:00:00Z",
+          "duration": "PT3H",
+          "value": 50.0
+        },
+        {
+          "valid_start": "2026-11-24T00:00:00Z",
+          "duration": "PT2H",
+          "value": 40.0
+        },
+        {
+          "valid_start": "2026-11-24T02:00:00Z",
+          "duration": "PT6H",
+          "value": 50.0
+        },
+        {
+          "valid_start": "2026-11-24T08:00:00Z",
+          "duration": "PT3H",
+          "value": 40.0
+        },
+        {
+          "valid_start": "2026-11-24T11:00:00Z",
+          "duration": "PT2H",
+          "value": 30.0
+        },
+        {
+          "valid_start": "2026-11-24T13:00:00Z",
+          "duration": "PT1H",
+          "value": 40.0
+        },
+        {
+          "valid_start": "2026-11-24T14:00:00Z",
+          "duration": "PT1H",
+          "value": 50.0
+        },
+        {
+          "valid_start": "2026-11-24T15:00:00Z",
+          "duration": "PT11H",
+          "value": 60.0
+        },
+        {
+          "valid_start": "2026-11-25T02:00:00Z",
+          "duration": "PT3H",
+          "value": 50.0
+        },
+        {
+          "valid_start": "2026-11-25T05:00:00Z",
+          "duration": "PT1H",
+          "value": 40.0
+        },
+        {
+          "valid_start": "2026-11-25T06:00:00Z",
+          "duration": "PT3H",
+          "value": 30.0
+        },
+        {
+          "valid_start": "2026-11-25T09:00:00Z",
+          "duration": "PT1H",
+          "value": 20.0
+        },
+        {
+          "valid_start": "2026-11-25T10:00:00Z",
+          "duration": "PT3H",
+          "value": 30.0
+        },
+        {
+          "valid_start": "2026-11-25T13:00:00Z",
+          "duration": "PT2H",
+          "value": 40.0
+        },
+        {
+          "valid_start": "2026-11-25T15:00:00Z",
+          "duration": "PT3H",
+          "value": 50.0
+        },
+        {
+          "valid_start": "2026-11-25T18:00:00Z",
+          "duration": "PT3H",
+          "value": 40.0
+        },
+        {
+          "valid_start": "2026-11-25T21:00:00Z",
+          "duration": "PT2H",
+          "value": 30.0
+        },
+        {
+          "valid_start": "2026-11-25T23:00:00Z",
+          "duration": "PT2H",
+          "value": 10.0
+        },
+        {
+          "valid_start": "2026-11-26T01:00:00Z",
+          "duration": "PT1H",
+          "value": 350.0
+        },
+        {
+          "valid_start": "2026-11-26T02:00:00Z",
+          "duration": "PT1H",
+          "value": 320.0
+        },
+        {
+          "valid_start": "2026-11-26T03:00:00Z",
+          "duration": "PT1H",
+          "value": 310.0
+        },
+        {
+          "valid_start": "2026-11-26T04:00:00Z",
+          "duration": "PT1H",
+          "value": 300.0
+        },
+        {
+          "valid_start": "2026-11-26T05:00:00Z",
+          "duration": "PT1H",
+          "value": 270.0
+        },
+        {
+          "valid_start": "2026-11-26T06:00:00Z",
+          "duration": "PT1H",
+          "value": 260.0
+        },
+        {
+          "valid_start": "2026-11-26T07:00:00Z",
+          "duration": "PT1H",
+          "value": 270.0
+        },
+        {
+          "valid_start": "2026-11-26T08:00:00Z",
+          "duration": "PT3H",
+          "value": 280.0
+        },
+        {
+          "valid_start": "2026-11-26T11:00:00Z",
+          "duration": "PT6H",
+          "value": 290.0
+        },
+        {
+          "valid_start": "2026-11-26T17:00:00Z",
+          "duration": "PT1H",
+          "value": 300.0
+        },
+        {
+          "valid_start": "2026-11-26T18:00:00Z",
+          "duration": "PT5H",
+          "value": 310.0
+        },
+        {
+          "valid_start": "2026-11-26T23:00:00Z",
+          "duration": "PT6H",
+          "value": 320.0
+        },
+        {
+          "valid_start": "2026-11-27T05:00:00Z",
+          "duration": "PT7H",
+          "value": 330.0
+        },
+        {
+          "valid_start": "2026-11-27T12:00:00Z",
+          "duration": "PT8H",
+          "value": 340.0
+        },
+        {
+          "valid_start": "2026-11-27T20:00:00Z",
+          "duration": "PT5H",
+          "value": 350.0
+        }
+      ]
+    }
+  },
+  "timezone": "America/New_York",
+  "alerts": {
+    "source": "NWS active alerts (api.weather.gov)",
+    "retrieved_at": "2026-11-20 16:38",
+    "timezone": "America/New_York",
+    "coverage": "Alerts covering the station location, its nearest marine forecast grid cell, and alerts naming the station's county. Alerts for adjacent marine zones, and surf-zone or coastal-waters forecast text, are not included.",
+    "items": [
+      {
+        "event": "Rip Current Statement",
+        "severity": "Moderate",
+        "urgency": "Expected",
+        "headline": "Rip Current Statement issued November 20 at 9:14AM EST until November 20 at 7:00PM EST by NWS Miami FL",
+        "area": "Coastal Broward County; Coastal Miami Dade County",
+        "onset": "2026-11-20 09:14",
+        "ends": "2026-11-20 19:00",
+        "description": "* WHAT...Dangerous rip currents. * WHERE...Coastal Broward County and Coastal Miami Dade County. * WHEN...Until 7 PM EST this evening. * IMPACTS...Rip currents can sweep even the best swimmers away from shore into deeper water.",
+        "instruction": "Swim near a lifeguard. If caught in a rip current, relax and float. Don't swim against the current. If able, swim in a direction following the shoreline. If unable to escape, face the shore and call or wave for help."
+      }
+    ],
+    "error": null
+  },
+  "waves": [
+    {
+      "date": "2026-11-21T00:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T01:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T02:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T03:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T04:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T05:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T06:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T07:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T08:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T09:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T10:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T11:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T12:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T13:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T14:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T15:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T16:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T17:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T18:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T19:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T20:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T21:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T22:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-21T23:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T00:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T01:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T02:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T03:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T04:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T05:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T06:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T07:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T08:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T09:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T10:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T11:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T12:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T13:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T14:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T15:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T16:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T17:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T18:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T19:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T20:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T21:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T22:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-22T23:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T00:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T01:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T02:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T03:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T04:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T05:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T06:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T07:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T08:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T09:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T10:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T11:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T12:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T13:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T14:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T15:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T16:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T17:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T18:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T19:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T20:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T21:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T22:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-23T23:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T00:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T01:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T02:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T03:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T04:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T05:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T06:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T07:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T08:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T09:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T10:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T11:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T12:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T13:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T14:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T15:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T16:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T17:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T18:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T19:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T20:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T21:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T22:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-24T23:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T00:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T01:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T02:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T03:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T04:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T05:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T06:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T07:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T08:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T09:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T10:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T11:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T12:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 3.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T13:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 4.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T14:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 4.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T15:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 4.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T16:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 4.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T17:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 4.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T18:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 4.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T19:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 4.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T20:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 4.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T21:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 4.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T22:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 4.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-25T23:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 4.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T00:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 4.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T01:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T02:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 11.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T03:00:00-05:00",
+      "wave_height": 1.000000032,
+      "wave_period": 11.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T04:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 11.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T05:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 11.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T06:00:00-05:00",
+      "wave_height": 2.000000064,
+      "wave_period": 10.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T07:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T08:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": 7.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T09:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": 6.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T10:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": 6.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T11:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": 7.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T12:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": 7.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T13:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T14:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T15:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T16:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T17:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T18:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T19:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T20:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T21:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T22:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-26T23:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T00:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T01:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": 8.0,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T02:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": null,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T03:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": null,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T04:00:00-05:00",
+      "wave_height": 3.000000096,
+      "wave_period": null,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T05:00:00-05:00",
+      "wave_height": null,
+      "wave_period": null,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T06:00:00-05:00",
+      "wave_height": null,
+      "wave_period": null,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T07:00:00-05:00",
+      "wave_height": null,
+      "wave_period": null,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T08:00:00-05:00",
+      "wave_height": null,
+      "wave_period": null,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T09:00:00-05:00",
+      "wave_height": null,
+      "wave_period": null,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T10:00:00-05:00",
+      "wave_height": null,
+      "wave_period": null,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T11:00:00-05:00",
+      "wave_height": null,
+      "wave_period": null,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T12:00:00-05:00",
+      "wave_height": null,
+      "wave_period": null,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T13:00:00-05:00",
+      "wave_height": null,
+      "wave_period": null,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T14:00:00-05:00",
+      "wave_height": null,
+      "wave_period": null,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T15:00:00-05:00",
+      "wave_height": null,
+      "wave_period": null,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T16:00:00-05:00",
+      "wave_height": null,
+      "wave_period": null,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T17:00:00-05:00",
+      "wave_height": null,
+      "wave_period": null,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T18:00:00-05:00",
+      "wave_height": null,
+      "wave_period": null,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T19:00:00-05:00",
+      "wave_height": null,
+      "wave_period": null,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T20:00:00-05:00",
+      "wave_height": null,
+      "wave_period": null,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T21:00:00-05:00",
+      "wave_height": null,
+      "wave_period": null,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T22:00:00-05:00",
+      "wave_height": null,
+      "wave_period": null,
+      "wave_direction": null
+    },
+    {
+      "date": "2026-11-27T23:00:00-05:00",
+      "wave_height": null,
+      "wave_period": null,
+      "wave_direction": null
+    }
+  ],
+  "pressure": {
+    "source": "NOAA CO-OPS",
+    "station": {
+      "station_id": "8722956",
+      "name": "South Port Everglades",
+      "latitude": 26.081667,
+      "longitude": -80.11667,
+      "distance_miles": 3.0814706801347365
+    },
+    "observed_at": "2026-11-20T16:30:00-05:00",
+    "current_pressure_inhg": 29.85776588350869,
+    "pressure_3_hours_ago_inhg": 29.87843687165868,
+    "change_3h_inhg": -0.02067098814998758,
+    "trend": "Falling steadily",
+    "outlook": "Good: falling pressure may indicate an active feeding window.",
+    "error": null
+  },
+  "detailed_forecast": "A chance of showers and thunderstorms between noon and 4pm, then a chance of showers and thunderstorms. Partly sunny, with a high near 83. Southwest wind 2 to 9 mph. Chance of precipitation is 50%. New rainfall amounts less than a tenth of an inch possible.",
+  "ai_evaluation": "",
+  "evaluation_id": null
+}

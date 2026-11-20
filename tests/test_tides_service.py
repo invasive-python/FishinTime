@@ -1,10 +1,12 @@
 import unittest
+from datetime import date
 from unittest.mock import Mock, patch
 
 import requests
 
 from services.tides_service import (
     get_tide_data,
+    get_tides_for_date_range,
     get_tides_from_station_id_and_dates,
 )
 
@@ -20,6 +22,21 @@ class TideServiceTests(unittest.TestCase):
 
         self.assertEqual(predictions, get_tide_data_mock.return_value["predictions"])
         get_tide_data_mock.assert_called_once_with("8721164", "20261015", "20261018")
+
+    @patch("services.tides_service.get_tide_data")
+    def test_fetches_tides_for_the_requested_forecast_horizon(self, get_tide_data_mock):
+        get_tide_data_mock.return_value = {"predictions": [{"t": "20261016 06:00"}]}
+
+        predictions = get_tides_for_date_range(
+            "8721164", date(2026, 10, 16), forecast_days=7
+        )
+
+        self.assertEqual(predictions, get_tide_data_mock.return_value["predictions"])
+        get_tide_data_mock.assert_called_once_with("8721164", "20261016", "20261022")
+
+    def test_rejects_tide_forecast_horizons_over_seven_days(self):
+        with self.assertRaisesRegex(ValueError, "between 1 and 7"):
+            get_tides_for_date_range("8721164", date(2026, 10, 16), 8)
 
     @patch("services.tides_service.requests.get")
     def test_http_errors_are_propagated(self, get):

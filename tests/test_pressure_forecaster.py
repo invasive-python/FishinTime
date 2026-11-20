@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import Mock, patch
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -7,87 +8,78 @@ from services.pressure_forecaster import get_fishing_pressure_trend
 
 
 class PressureForecasterTests(unittest.TestCase):
-    @patch("services.pressure_forecaster.requests.get")
-    def test_uses_open_meteo_forecast_api_and_json_response(self, get):
-        response = Mock()
-        response.json.return_value = {
-            "current": {"pressure_msl": 29.88, "time": "2026-10-23T12:00"},
-            "hourly": {
-                "time": [
-                    "2026-10-23T09:00",
-                    "2026-10-23T10:00",
-                    "2026-10-23T11:00",
-                    "2026-10-23T12:00",
-                ],
-                "pressure_msl": [29.82, 29.835, 29.865, 29.88],
-            },
+    @patch("services.coops_observations_service.requests.get")
+    def test_uses_noaa_station_observations_and_converts_millibars(self, get):
+        get.return_value.json.return_value = {"data": [
+            {"t": "2026-10-23 09:00", "v": "1009.0"},
+            {"t": "2026-10-23 12:00", "v": "1011.0"},
+        ]}
+
+        result = get_fishing_pressure_trend("8723214", ZoneInfo("America/New_York"))
+
+        self.assertEqual(get.call_args.kwargs["params"]["product"], "air_pressure")
+        self.assertEqual(get.call_args.kwargs["params"]["station"], "8723214")
+        self.assertEqual(get.call_args.kwargs["params"]["units"], "english")
+        self.assertEqual(get.call_args.kwargs["params"]["time_zone"], "gmt")
+        self.assertEqual(result.source, "NOAA CO-OPS")
+        self.assertEqual(result.observed_at.isoformat(), "2026-10-23T08:00:00-04:00")
+        self.assertAlmostEqual(result.current_pressure_inhg, 1011 / 33.8638866667)
+        self.assertAlmostEqual(result.change_3h_inhg, 2 / 33.8638866667)
+        self.assertEqual(result.trend, "Rising rapidly")
+
+    @patch("services.coops_observations_service.requests.get")
+    def test_no_sensor_data_is_reported_as_unavailable(self, get):
+        get.return_value.json.return_value = {
+            "error": {"message": "No data was found for this station."}
         }
-        get.return_value = response
+        result = get_fishing_pressure_trend("123", ZoneInfo("UTC"))
+        self.assertIsNone(result.current_pressure_inhg)
+        self.assertIn("No data", result.error)
 
-        pressure = get_fishing_pressure_trend(26.23, -80.12)
+    @patch("services.coops_observations_service.requests.get")
+    def test_missing_three_hour_observation_does_not_invent_trend(self, get):
+        get.return_value.json.return_value = {"data": [
+            {"t": "2026-10-23 12:00", "v": "1011.0"},
+        ]}
+        result = get_fishing_pressure_trend("123", ZoneInfo("UTC"))
+        self.assertIsNotNone(result.current_pressure_inhg)
+        self.assertIsNone(result.trend)
+        self.assertIn("three hours", result.error)
 
-        get.assert_called_once()
-        self.assertEqual(
-            get.call_args.args[0],
-            "https://api.open-meteo.com/v1/forecast",
-        )
-        self.assertEqual(get.call_args.kwargs["params"]["hourly"], "pressure_msl")
-        self.assertEqual(get.call_args.kwargs["params"]["pressure_unit"], "inHg")
-        self.assertEqual(pressure.current_pressure_inhg, 29.88)
-        self.assertEqual(get.call_args.kwargs["timeout"], 20)
-        self.assertEqual(pressure.current_pressure_inhg, 29.88)
-        self.assertEqual(pressure.pressure_3_hours_ago_inhg, 29.82)
-        self.assertAlmostEqual(pressure.change_3h_inhg, 0.06)
-        self.assertEqual(pressure.trend, "Rising rapidly")
-        self.assertEqual(
-            pressure.outlook,
-            "Poor: rapidly rising pressure may slow fish activity.",
-        )
+    @patch("services.coops_observations_service.requests.get")
+    def test_fetches_missing_history_at_exact_utc_interval(self, get):
+        recent = Mock()
+        recent.json.return_value = {"data": [
+            {"t": "2026-03-08 08:00", "v": "1011.0"},
+        ]}
+        history = Mock()
+        history.json.return_value = {"data": [
+            {"t": "2026-03-08 04:54", "v": "1012.0"},
+            {"t": "2026-03-08 05:00", "v": "1012.2"},
+        ]}
+        get.side_effect = [recent, history]
 
-    @patch("services.pressure_forecaster.requests.get")
-    def test_reports_html_response_instead_of_raising_json_decode_error(self, get):
-        response = Mock()
-        response.status_code = 200
-        response.headers = {"Content-Type": "text/html"}
-        response.text = "<!doctype html><html></html>"
-        response.json.side_effect = requests.exceptions.JSONDecodeError(
-            "Expecting value", response.text, 0
-        )
-        get.return_value = response
+        result = get_fishing_pressure_trend("8722956", ZoneInfo("America/New_York"))
 
-        error = get_fishing_pressure_trend(26.23, -80.12)
+        self.assertEqual(result.observed_at.isoformat(), "2026-03-08T04:00:00-04:00")
+        self.assertAlmostEqual(result.pressure_3_hours_ago_inhg, 1012.2 / 33.8638866667)
+        self.assertAlmostEqual(result.change_3h_inhg, -1.2 / 33.8638866667)
+        self.assertEqual(result.trend, "Falling rapidly")
+        self.assertIsNone(result.error)
+        params = get.call_args_list[1].kwargs["params"]
+        self.assertEqual(params["station"], "8722956")
+        self.assertEqual(params["product"], "air_pressure")
+        self.assertEqual(params["time_zone"], "gmt")
+        self.assertEqual(params["begin_date"], "20260308 04:48")
+        self.assertEqual(params["end_date"], "20260308 05:00")
 
-        self.assertIn("Expected JSON but received text/html", error.error)
-        self.assertIn("<!doctype html>", error.error)
-
-    @patch("services.pressure_forecaster.requests.get")
-    def test_matches_quarter_hour_current_time_to_prior_hourly_readings(self, get):
-        response = Mock()
-        response.json.return_value = {
-            "current": {
-                "pressure_msl": 29.9,
-                "time": "2026-10-23T19:45",
-            },
-            "hourly": {
-                "time": [
-                    "2026-10-23T16:00",
-                    "2026-10-23T17:00",
-                    "2026-10-23T18:00",
-                    "2026-10-23T19:00",
-                    "2026-10-23T20:00",
-                ],
-                "pressure_msl": [29.899, 29.899, 29.899, 29.899, 29.9],
-            },
-        }
-        get.return_value = response
-
-        pressure = get_fishing_pressure_trend(26.23, -80.12)
-
-        self.assertEqual(pressure.current_pressure_inhg, 29.9)
-        self.assertEqual(pressure.pressure_3_hours_ago_inhg, 29.899)
-        self.assertAlmostEqual(pressure.change_3h_inhg, 0.001)
-        self.assertEqual(pressure.trend, "Stable")
-
-
-if __name__ == "__main__":
-    unittest.main()
+    @patch("services.coops_observations_service.requests.get")
+    def test_failed_history_lookup_preserves_current_pressure_and_reports_error(self, get):
+        recent = Mock()
+        recent.json.return_value = {"data": [{"t": "2026-10-23 12:00", "v": "1011.0"}]}
+        get.side_effect = [recent, requests.Timeout("timed out")]
+        with self.assertLogs("services.pressure_forecaster", level="WARNING"):
+            result = get_fishing_pressure_trend("123", ZoneInfo("UTC"))
+        self.assertIsNotNone(result.current_pressure_inhg)
+        self.assertIsNone(result.trend)
+        self.assertIn("Pressure history lookup failed", result.error)
